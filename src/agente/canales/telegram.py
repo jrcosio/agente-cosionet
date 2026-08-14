@@ -4,12 +4,12 @@ Traduce en las dos direcciones: lo que llega de Telegram se convierte en un
 `MensajeEntrante`, y lo que responde el agente sale como uno o varios mensajes
 del bot. **El agente no se toca**: recibe texto y devuelve texto.
 
-Telegram se puede escuchar de dos formas, y acá usamos la primera:
+Telegram se puede escuchar de dos formas, y aquí usamos la primera:
 
     polling  → tu programa le pregunta a Telegram "¿hay algo nuevo?"  ← esta
     webhook  → Telegram le pega a una URL tuya (necesita URL pública y HTTPS)
 
-Polling es lo que hace que esto **funcione desde tu computadora**, sin dominio,
+Polling es lo que hace que esto **funcione desde tu ordenador**, sin dominio,
 sin certificado y sin abrir puertos. Un canal que obligara a webhook —hay
 varios— necesitaría un servidor de verdad; este no.
 
@@ -55,7 +55,7 @@ class Telegram(Canal):
     def __init__(self, token: str, espera: int = ESPERA_DE_ESCUCHA) -> None:
         if not token:
             raise ValueError(
-                "Falta el token de Telegram. Abrí el .env y completá "
+                "Falta el token de Telegram. Abre el .env y completa "
                 "TELEGRAM_TOKEN con el que te dio @BotFather."
             )
 
@@ -63,13 +63,13 @@ class Telegram(Canal):
         self.espera = espera
 
         # Desde qué novedad seguimos pidiendo. Telegram guarda los mensajes
-        # hasta que le confirmás que los recibiste, y la confirmación es
+        # hasta que le confirmas que los recibiste, y la confirmación es
         # justamente pedirle los siguientes.
         self._proxima = 0
 
         # Los últimos mensajes que ya contestamos. Telegram reenvía ante la
         # duda, y sin esto el agente contestaría dos veces lo mismo. Es una
-        # cola corta: alcanza con acordarse de los últimos.
+        # cola corta: basta con acordarse de los últimos.
         self._ya_contestados: deque[str] = deque(maxlen=500)
 
     # -- Entrada ---------------------------------------------------------------

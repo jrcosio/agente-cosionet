@@ -55,10 +55,10 @@ class TelegramFalso(Telegram):
 
 
 def test_traduce_un_mensaje_normal():
-    entrante = _traducir(novedad("¿que clima hace?", chat=777, update=42))
+    entrante = _traducir(novedad("¿que tiempo hace?", chat=777, update=42))
 
     assert entrante is not None
-    assert entrante.texto == "¿que clima hace?"
+    assert entrante.texto == "¿que tiempo hace?"
     assert entrante.conversacion == "777", "el chat_id es el thread_id"
     assert entrante.identificador == "42"
 
@@ -200,7 +200,7 @@ def test_el_token_sale_del_env(monkeypatch):
 
 # -- El bucle entero, de punta a punta ----------------------------------------
 #
-# Acá se pegan todas las piezas: llega un mensaje de Telegram, contesta el
+# Aquí se pegan todas las piezas: llega un mensaje de Telegram, contesta el
 # agente, sale la respuesta. Con un canal de mentira y un modelo de mentira,
 # así que no toca la red ni gasta un token.
 

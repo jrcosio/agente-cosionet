@@ -2,7 +2,7 @@
 
     uv run python bot_telegram.py
 
-Corre en tu computadora: no hace falta hosting, ni dominio, ni abrir puertos.
+Corre en tu ordenador: no hace falta hosting, ni dominio, ni abrir puertos.
 El programa le pregunta a Telegram si hay mensajes nuevos (polling), así que
 mientras esta ventana esté abierta, el bot contesta.
 
@@ -47,14 +47,14 @@ def main() -> int:
         quien = canal.yo_soy()
     except Exception as e:
         print(f"{ROJO}No se pudo hablar con Telegram: {type(e).__name__}: {e}{FIN}")
-        print(f"{GRIS}Revisá el TELEGRAM_TOKEN del .env.{FIN}")
+        print(f"{GRIS}Revisa el TELEGRAM_TOKEN del .env.{FIN}")
         return 1
 
     memoria = "Postgres" if config.modo == "produccion" else "SQLite"
 
     print(f"\n{AMBAR}Bot escuchando{FIN} - @{quien.get('username', '?')}")
     print(f"{GRIS}   {config.proveedor} - {config.modelo} - memoria {memoria}{FIN}")
-    print(f"{GRIS}   Escribile por Telegram. Para cortar: Ctrl+C.{FIN}\n")
+    print(f"{GRIS}   Escríbele por Telegram. Para cortar: Ctrl+C.{FIN}\n")
 
     try:
         atender(agente, canal)

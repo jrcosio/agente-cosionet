@@ -50,7 +50,7 @@ class Canal(ABC):
     def deberia_responder(self, mensaje: MensajeEntrante) -> bool:
         """Si el agente tiene que contestar este mensaje o dejarlo pasar.
 
-        Acá va lo que en producción evita que el bot moleste:
+        Aquí va lo que en producción evita que el bot moleste:
           · que una persona haya tomado la conversación
           · que el bot esté apagado para ese contacto
           · que sea un mensaje que mandó el propio bot

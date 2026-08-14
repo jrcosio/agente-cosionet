@@ -39,11 +39,11 @@ def main() -> int:
     agente = Agente(config)
 
     print(f"\n{AMBAR}Agente listo{FIN} - {config.proveedor} - {config.modelo}")
-    print(f"{GRIS}Escribi 'salir' para terminar.{FIN}\n")
+    print(f"{GRIS}Escribe 'salir' para terminar.{FIN}\n")
 
     while True:
         try:
-            texto = input(f"{GRIS}vos >{FIN} ").strip()
+            texto = input(f"{GRIS}tú >{FIN} ").strip()
         except (KeyboardInterrupt, EOFError):
             print()
             return 0

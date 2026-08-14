@@ -2,7 +2,7 @@
 
     uv run python servidor.py
 
-Después abrí:  http://localhost:8000
+Después abre:  http://localhost:8000
 """
 
 from __future__ import annotations
@@ -28,10 +28,10 @@ def main() -> None:
 
     lineas = [
         "",
-        "  AgentKit - plataforma de pruebas",
-        "  --------------------------------",
+        "  CosioNET Agent - plataforma de pruebas",
+        "  --------------------------------------",
         "",
-        f"  Abri:  http://localhost:{PUERTO}",
+        f"  Abre:  http://localhost:{PUERTO}",
         "",
     ]
 
@@ -40,8 +40,8 @@ def main() -> None:
     else:
         lineas += [
             "  [!] Todavia no hay ninguna clave cargada.",
-            "      Abri el archivo .env y completa la de un proveedor",
-            "      (con uno alcanza). Despues recarga la pagina.",
+            "      Abre el archivo .env y completa la de un proveedor",
+            "      (con uno basta). Despues recarga la pagina.",
         ]
 
     lineas += ["", "  Para cortar: Ctrl+C", ""]

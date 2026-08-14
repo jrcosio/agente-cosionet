@@ -2,12 +2,12 @@
 
 <br>
 
-# 🤖 AgentKit
+# 🤖 CosioNET Agent
 
-### Un agente de IA que corre **en tu computadora**
+### Un agente de IA que corre **en tu ordenador**
 
 **Sin servidor. Sin hosting. Sin pagar infraestructura.**<br>
-Y si ya pagás ChatGPT, **sin clave de API y sin tarjeta.**
+Y si ya pagas ChatGPT, **sin clave de API y sin tarjeta.**
 
 <br>
 
@@ -35,8 +35,8 @@ Y si ya pagás ChatGPT, **sin clave de API y sin tarjeta.**
 </div>
 
 > [!TIP]
-> **¿Ya pagás ChatGPT?** Entonces no necesitás ninguna clave de API, ninguna
-> tarjeta y no vas a pagar por token: el agente usa tu suscripción y elegís
+> **¿Ya pagas ChatGPT?** Entonces no necesitas ninguna clave de API, ninguna
+> tarjeta y no vas a pagar por token: el agente usa tu suscripción y eliges
 > entre **Sol**, **Terra** y **Luna** desde la misma lista.
 > Es una línea en el `.env` → **[cómo se hace](#chatgpt)**.
 
@@ -64,8 +64,8 @@ Y si ya pagás ChatGPT, **sin clave de API y sin tarjeta.**
 
 Un agente conversacional de verdad —con memoria, con personalidad editable y
 con herramientas— que arranca en tu máquina con dos comandos. Viene con una
-**plataforma de pruebas**: una web local donde le hablás, cambiás de modelo en
-caliente, editás quién es y ves cuántos tokens gastás en cada mensaje.
+**plataforma de pruebas**: una web local donde le hablas, cambias de modelo en
+caliente, editas quién es y ves cuántos tokens gastas en cada mensaje.
 
 <table>
 <tr>
@@ -89,7 +89,7 @@ botón, sin reiniciar y sin perder la charla.
 
 **🌦️ Sabe el clima**
 
-Preguntale el tiempo de cualquier ciudad y sale a buscarlo. Sin clave, sin
+Pregúntale el tiempo de cualquier ciudad y sale a buscarlo. Sin clave, sin
 registro: es la primera herramienta.
 
 </td>
@@ -99,16 +99,16 @@ registro: es la primera herramienta.
 
 **🎭 Personalidad en un `.md`**
 
-Editás `prompts/sistema.md`, guardás, y el próximo mensaje ya sale distinto.
+Editas `prompts/sistema.md`, guardas, y el próximo mensaje ya sale distinto.
 Sin reiniciar nada.
 
 </td>
 <td width="33%" valign="top">
 
-**✈️ Anda en Telegram**
+**✈️ Funciona en Telegram**
 
 El mismo agente en tu teléfono, sin pagar hosting: el bot corre en tu
-computadora y atiende a todo el mundo.
+ordenador y atiende a todo el mundo.
 
 </td>
 <td width="33%" valign="top">
@@ -132,13 +132,13 @@ Un agente son tres cosas juntas, y el grafo que las pega son 12 líneas:
 
 ```mermaid
 flowchart LR
-    V(["Vos<br>escribís"]) --> M
+    V(["Tú<br>escribes"]) --> M
 
     subgraph AG["El agente · agente.py"]
         S["<b>Prompt del sistema</b><br>prompts/sistema.md"] --> M{{"<b>El modelo</b><br>Claude · OpenAI · Gemini<br>o tu ChatGPT"}}
         MEM[("<b>Memoria</b><br>LangGraph · thread_id")] --> M
         M -.->|"¿necesita un dato?"| H["<b>Herramientas</b><br>el clima"]
-        H -.->|"acá tenés"| M
+        H -.->|"aquí tienes"| M
     end
 
     M --> R(["El agente<br>responde"])
@@ -173,11 +173,11 @@ uv sync
 ```
 
 **Y ya está.** [uv](https://docs.astral.sh/uv/) arma el entorno en `.venv/`,
-instala todo con las versiones exactas del `uv.lock` y —si no tenés el Python
+instala todo con las versiones exactas del `uv.lock` y —si no tienes el Python
 que pide el proyecto— se lo baja solo. No hay que crear ni activar nada.
 
 <details>
-<summary><b>¿No tenés uv?</b> Se instala en una línea — o seguí con pip</summary>
+<summary><b>¿No tienes uv?</b> Se instala en una línea — o sigue con pip</summary>
 
 <br>
 
@@ -194,7 +194,7 @@ También está en Homebrew (`brew install uv`), en winget y en pip
 
 <br>
 
-**O quedate con pip**, que sigue funcionando igual:
+**O quédate con pip**, que sigue funcionando igual:
 
 ```bash
 python -m venv .venv
@@ -209,7 +209,7 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Con pip, sacale el `uv run` a todos los comandos de acá en adelante: con el
+Con pip, quítale el `uv run` a todos los comandos de aquí en adelante: con el
 entorno activado, `python servidor.py` es lo mismo que `uv run python
 servidor.py`.
 
@@ -222,16 +222,16 @@ copy .env.example .env      # Windows
 cp .env.example .env        # Mac o Linux
 ```
 
-Abrí el `.env` y dejá listo **uno solo** de estos cuatro:
+Abre el `.env` y deja listo **uno solo** de estos cuatro:
 
-| | Proveedor | Qué necesitás | Qué completás |
+| | Proveedor | Qué necesitas | Qué completas |
 |:--:|---|---|---|
 | 🟢 | **ChatGPT** | Tu suscripción. **Nada más.** | `PROVEEDOR=chatgpt` |
 | 🟠 | **Claude** | Clave de [console.anthropic.com](https://console.anthropic.com/settings/keys) | `ANTHROPIC_API_KEY` |
 | ⚫ | **OpenAI** | Clave de [platform.openai.com](https://platform.openai.com/api-keys) | `OPENAI_API_KEY` |
 | 🔵 | **Gemini** | Clave de [aistudio.google.com](https://aistudio.google.com/apikey) | `GOOGLE_API_KEY` |
 
-Con uno alcanza. Si dejás varios listos, los cambiás desde la web con un botón.
+Con uno basta. Si dejas varios listos, los cambias desde la web con un botón.
 
 > [!IMPORTANT]
 > El `.env` está en `.gitignore`. **Nunca se sube a GitHub.**
@@ -242,13 +242,13 @@ Con uno alcanza. Si dejás varios listos, los cambiás desde la web con un botó
 uv run python servidor.py
 ```
 
-Abrí **http://localhost:8000** &nbsp;·&nbsp; ¿preferís la terminal?
+Abre **http://localhost:8000** &nbsp;·&nbsp; ¿prefieres la terminal?
 `uv run python chat.py`
 
 > [!TIP]
 > `uv run` revisa el entorno antes de cada corrida: si alguien tocó las
-> dependencias, las pone al día solo. Si preferís no escribirlo cada vez,
-> activá el entorno (`source .venv/bin/activate`) y quedate con
+> dependencias, las pone al día solo. Si prefieres no escribirlo cada vez,
+> activa el entorno (`source .venv/bin/activate`) y quédate con
 > `python servidor.py`.
 
 <br>
@@ -262,7 +262,7 @@ Abrí **http://localhost:8000** &nbsp;·&nbsp; ¿preferís la terminal?
 ```
 agente-cosionet/
 ├── prompts/
-│   └── sistema.md          ← la personalidad del agente (editalo)
+│   └── sistema.md          ← la personalidad del agente (edítalo)
 ├── src/agente/
 │   ├── agente.py           ← EL AGENTE. El grafo de LangGraph.
 │   ├── herramientas.py     ← lo que sabe hacer además de hablar (el clima)
@@ -300,11 +300,11 @@ agente-cosionet/
 | `uv run pytest` | los tests |
 | `uv sync --group produccion` | agrega Postgres, para `MODO=produccion` |
 
-Uno de los 97 se saltea si no tenés el grupo `produccion`: es el que prueba
+Uno de los 97 se salta si no tienes el grupo `produccion`: es el que prueba
 la conexión a Postgres. Con `uv sync --group produccion` corren los 97.
 
 > [!NOTE]
-> **Si vas a leer un solo archivo, leé `src/agente/agente.py`.** Ahí está todo
+> **Si vas a leer un solo archivo, lee `src/agente/agente.py`.** Ahí está todo
 > el agente: el grafo son 12 líneas, el resto es explicación y ayudantes.
 
 <br>
@@ -321,13 +321,13 @@ que envejezca: si mañana sale un modelo nuevo, aparece solo.
 
 - El selector de arriba muestra los modelos disponibles.
 - El botón **↻** vuelve a preguntar (por si acaba de salir uno).
-- Cambiar de modelo **no borra la conversación**: podés arrancar con uno,
+- Cambiar de modelo **no borra la conversación**: puedes arrancar con uno,
   cambiar a otro y seguir la misma charla.
 - **El máximo de respuesta se acomoda solo.** Cada modelo aguanta una cantidad
   distinta de tokens de respuesta; la plataforma le pregunta cuánto es y lo
   pone. No es algo que tengas que saber ni tocar.
 
-¿No querés tocar la web? Ponelo en el `.env` y listo:
+¿No quieres tocar la web? Ponlo en el `.env` y listo:
 
 ```bash
 PROVEEDOR=claude
@@ -355,16 +355,16 @@ vencida), la plataforma usa igual lo que diga el `.env`.
 
 </div>
 
-Los otros tres proveedores se pagan por consumo: pedís una clave, ponés una
-tarjeta y te cobran por lo que gastás. **Con ChatGPT no.** Si ya tenés la
+Los otros tres proveedores se pagan por consumo: pides una clave, pones una
+tarjeta y te cobran por lo que gastas. **Con ChatGPT no.** Si ya tienes la
 suscripción (Plus, Pro o Business), el agente puede usar esa.
 
 ### Los tres pasos
 
-**1.** Instalá la app de **ChatGPT** en tu computadora — o el CLI, desde
+**1.** Instala la app de **ChatGPT** en tu ordenador — o el CLI, desde
 [chatgpt.com/codex](https://chatgpt.com/codex).
 
-**2.** **Entrá con tu cuenta.** Desde la terminal:
+**2.** **Entra con tu cuenta.** Desde la terminal:
 
 ```bash
 codex login
@@ -376,7 +376,7 @@ codex login
 PROVEEDOR=chatgpt
 ```
 
-Listo. `uv run python servidor.py` y el botón **ChatGPT** ya está prendido.
+Listo. `uv run python servidor.py` y el botón **ChatGPT** ya está encendido.
 
 No hay ninguna clave que pegar porque la credencial ya está en tu máquina: al
 entrar con tu cuenta se guarda en `~/.codex/auth.json`, y el agente la lee de
@@ -396,10 +396,10 @@ PROVEEDOR=chatgpt
 MODELO_CHATGPT=gpt-5.6-sol
 ```
 
-En la plataforma los elegís del mismo selector de siempre, y aparecen en ese
+En la plataforma los eliges del mismo selector de siempre, y aparecen en ese
 orden porque es el que recomienda el proveedor. También vas a ver modelos
 anteriores (GPT-5.5, GPT-5.4): la lista sale de preguntarle a la suscripción,
-no de una lista escrita acá que envejezca.
+no de una lista escrita aquí que envejezca.
 
 ### Las diferencias con la clave de API
 
@@ -407,20 +407,20 @@ Es el mismo modelo del otro lado, pero no es el mismo camino:
 
 | | Con tu suscripción | Con clave de API |
 |---|---|---|
-| **Qué pagás** | Nada aparte: la cuota que ya tenés | Por token, con tarjeta |
+| **Qué pagas** | Nada aparte: la cuota que ya tienes | Por token, con tarjeta |
 | **Si se agota** | Se agotó también para ChatGPT y Codex | No hay cuota: hay factura |
 | **`MAX_TOKENS`** | No se aplica: lo decide ChatGPT | Se respeta |
-| **Dónde corre** | Tu computadora | Tu computadora **o un servidor** |
+| **Dónde corre** | Tu ordenador | Tu ordenador **o un servidor** |
 
 > [!WARNING]
 > **Esto es para tu máquina, no para un servidor.** La sesión vive en tu
 > `~/.codex`, que dentro de un contenedor no existe. Terminal, plataforma y el
-> bot de Telegram andan perfecto; para dejar el bot corriendo en un servidor
+> bot de Telegram funcionan perfectamente; para dejar el bot corriendo en un servidor
 > va con clave de API.
 
 > [!CAUTION]
 > **Y una que es honesto decir:** este camino es el que usa Codex, no una API
-> con contrato público. Anda bien y no tiene truco, pero si OpenAI le cambia
+> con contrato público. Funciona bien y no tiene truco, pero si OpenAI le cambia
 > algo un martes, se puede romper sin que hayas tocado nada. Con
 > `PROVEEDOR=openai` eso no pasa. Todo lo que hace falta para arreglarlo está
 > comentado en [`src/agente/modelo_chatgpt.py`](src/agente/modelo_chatgpt.py).
@@ -472,7 +472,7 @@ Debajo de los modelos hay una barra con el estado del agente:
 modo test    memoria SQLite    caché activado    máx. respuesta 128.000 tokens    recuerda [20] mensajes
 ```
 
-**Lo único editable ahí es "recuerda".** Escribís el número y listo: se guarda
+**Lo único editable ahí es "recuerda".** Escribes el número y listo: se guarda
 en el `.env` y se aplica al instante, sin reiniciar el servidor.
 
 El resto está fijo a propósito:
@@ -481,7 +481,7 @@ El resto está fijo a propósito:
 |---|---|
 | **modo** | La plataforma es para probar en tu máquina: siempre `test`. Para pasar a producción se edita el `.env`. |
 | **caché** | Siempre activado. No hay razón para apagarlo salvo que estés midiendo cuánto ahorra. |
-| **máx. respuesta** | **Lo define el modelo, no vos.** Cada modelo aguanta un máximo distinto, así que la plataforma le pregunta cuánto es y lo pone. Cambiás de modelo y se acomoda solo. (Con `PROVEEDOR=chatgpt` dice "lo decide ChatGPT": ese endpoint no acepta que se le pida un tope.) |
+| **máx. respuesta** | **Lo define el modelo, no tú.** Cada modelo aguanta un máximo distinto, así que la plataforma le pregunta cuánto es y lo pone. Cambias de modelo y se acomoda solo. (Con `PROVEEDOR=chatgpt` dice "lo decide ChatGPT": ese endpoint no acepta que se le pida un tope.) |
 
 Todo lo demás se cambia editando el `.env`. Cuando la plataforma escribe ahí,
 **respeta los comentarios y el orden** del archivo: solo reemplaza la línea de
@@ -500,7 +500,7 @@ Esto es lo que más confunde y lo que casi nadie explica:
 > [!IMPORTANT]
 > **Las APIs de los modelos no recuerdan nada.**
 > Cada llamada es independiente. Que el agente "se acuerde" de lo que hablaron
-> es puro trabajo tuyo: le volvés a mandar la conversación entera cada vez.
+> es puro trabajo tuyo: le vuelves a mandar la conversación entera cada vez.
 
 LangGraph resuelve eso con dos ideas:
 
@@ -509,8 +509,8 @@ LangGraph resuelve eso con dos ideas:
 - **checkpointer** — dónde se guardan esas conversaciones.
 
 ```python
-agente.responder("Hola, me llamo Facu", conversacion="chat-1")
-agente.responder("¿Cómo me llamo?",     conversacion="chat-1")  # → "Facu"
+agente.responder("Hola, me llamo Javi", conversacion="chat-1")
+agente.responder("¿Cómo me llamo?",     conversacion="chat-1")  # → "Javi"
 agente.responder("¿Cómo me llamo?",     conversacion="chat-2")  # → no sabe
 ```
 
@@ -534,8 +534,8 @@ en cada mensaje, así que bajar de 20 a 10 es, más o menos, la mitad del gasto
 en charlas largas. La contra es que el agente se olvida antes.
 
 > [!TIP]
-> Para verlo funcionar: ponelo en 4, decile tu nombre, mandale tres mensajes
-> cualquiera y después preguntale cómo te llamás. No se va a acordar.
+> Para verlo funcionar: ponlo en 4, dile tu nombre, mándale tres mensajes
+> cualquiera y después pregúntale cómo te llamas. No se va a acordar.
 
 <br>
 
@@ -548,7 +548,7 @@ en charlas largas. La contra es que el agente se olvida antes.
 Una sola variable decide dónde se guardan las conversaciones:
 
 ```bash
-MODO=test        # SQLite: un archivo. No instalás nada.
+MODO=test        # SQLite: un archivo. No instalas nada.
 MODO=produccion  # Postgres: para varios procesos atendiendo a la vez.
 ```
 
@@ -589,7 +589,7 @@ Nada más. **Las tablas las crea solo** la primera vez que arranca. Y el agente
 no se toca: es la misma clase, el mismo grafo, el mismo código.
 
 <details>
-<summary><b>¿No tenés Postgres? Con Docker, en una línea</b></summary>
+<summary><b>¿No tienes Postgres? Con Docker, en una línea</b></summary>
 
 <br>
 
@@ -603,7 +603,7 @@ Y el DSN queda: `postgresql://postgres:clave@localhost:5432/agente`
 </details>
 
 <details>
-<summary><b>Y si querés memoria que no guarde nada</b></summary>
+<summary><b>Y si quieres memoria que no guarde nada</b></summary>
 
 <br>
 
@@ -627,25 +627,25 @@ a = Agente(checkpointer=ram())   # se borra al cerrar el programa
 ## ⚡ El caché: gastar menos
 
 El prompt del sistema viaja **entero, en cada mensaje**. Si tu prompt tiene
-2.000 tokens y mandás 100 mensajes, pagaste 200.000 tokens por el mismo texto.
+2.000 tokens y mandas 100 mensajes, pagaste 200.000 tokens por el mismo texto.
 
 El caché hace que el proveedor lo guarde de su lado y te cobre una fracción a
 partir del segundo mensaje.
 
 ```bash
-CACHE=true    # en el .env — viene activado, dejalo así
+CACHE=true    # en el .env — viene activado, déjalo así
 ```
 
 | Proveedor | Cómo funciona |
 |---|---|
-| **Claude** | Hay que marcarlo a mano — es lo que hace este repo por vos |
+| **Claude** | Hay que marcarlo a mano — es lo que hace este repo por ti |
 | **OpenAI** | Automático, no hay que hacer nada |
 | **Gemini** | Automático, no hay que hacer nada |
 | **ChatGPT** | Automático, no hay que hacer nada |
 
 **Dos cosas para tener en cuenta:**
 
-1. El caché **recién se activa cuando el prompt supera cierto tamaño**
+1. El caché **solo se activa cuando el prompt supera cierto tamaño**
    (alrededor de 1.000 tokens). Con un prompt corto no pasa nada malo:
    simplemente no se cachea. No es un error.
 2. La plataforma te muestra el ahorro en cada mensaje: cuando el caché entra,
@@ -659,26 +659,26 @@ CACHE=true    # en el .env — viene activado, dejalo así
 
 ## 🌦️ El clima: la primera herramienta
 
-Hasta acá el agente solo conversaba: contestaba con lo que sabía de antes. Una
+Hasta aquí el agente solo conversaba: contestaba con lo que sabía de antes. Una
 **herramienta** es una función que puede usar cuando la necesita, y con eso
 deja de adivinar y sale a buscar el dato.
 
-Probá:
+Prueba:
 
 ```
-¿qué clima hace en Rosario?
-¿me llevo campera a Mar del Plata?
+¿qué tiempo hace en Sevilla?
+¿me llevo chaqueta a Bilbao?
 ¿está lloviendo en Madrid?
 ```
 
-Fijate que **vos no le decís que use la herramienta**. El modelo lee la
+Fíjate que **tú no le dices que use la herramienta**. El modelo lee la
 pregunta, se da cuenta de que necesita el clima, la pide, recibe el resultado
-y recién ahí te contesta. Si le preguntás cualquier otra cosa, ni la toca.
+y solo entonces te contesta. Si le preguntas cualquier otra cosa, ni la toca.
 
 **No hay que pagar ni registrarse.** Usa [Open-Meteo](https://open-meteo.com):
 gratis, sin clave de API y sin tarjeta para uso no comercial. Es a propósito —
 arrancar este repo no tiene que depender de sacar una credencial más. Lo único
-que seguís pagando es el modelo, como siempre.
+que sigues pagando es el modelo, como siempre.
 
 **Lo que sí cuesta un poco más.** Una pregunta con herramienta son **dos
 llamadas al modelo**, no una: la primera para que pida el clima, la segunda
@@ -697,28 +697,28 @@ problema al modelo y el modelo te lo explica.
 
 ## ✈️ Ponerlo en Telegram
 
-Hasta acá el agente vivía en tu navegador. Con esto lo tenés en el teléfono, y
-**sin pagar hosting**: corre en tu computadora igual que todo lo demás.
+Hasta aquí el agente vivía en tu navegador. Con esto lo tienes en el teléfono, y
+**sin pagar hosting**: corre en tu ordenador igual que todo lo demás.
 
 ### Los tres pasos
 
-**1.** Pedile un bot a Telegram. Abrí [@BotFather](https://t.me/BotFather),
-mandale `/newbot` y seguile la conversación. Al final te da un token, que es
+**1.** Pídele un bot a Telegram. Abre [@BotFather](https://t.me/BotFather),
+mándale `/newbot` y sigue la conversación. Al final te da un token, que es
 una tira larga tipo `8983476848:AAG4j4...`.
 
-**2.** Pegalo en el `.env`:
+**2.** Pégalo en el `.env`:
 
 ```bash
 TELEGRAM_TOKEN=el-que-te-dio-BotFather
 ```
 
-**3.** Arrancalo:
+**3.** Arráncalo:
 
 ```bash
 uv run python bot_telegram.py
 ```
 
-Buscá tu bot por nombre en Telegram, escribile, y listo.
+Busca tu bot por nombre en Telegram, escríbele, y listo.
 
 ### Por qué no hace falta un servidor
 
@@ -729,23 +729,23 @@ Telegram se puede escuchar de dos formas. Este bot usa la primera:
 | **Polling** ← esta | Tu programa le pregunta a Telegram si hay algo nuevo | **No** |
 | **Webhook** | Telegram le pega a una URL tuya | Sí, con HTTPS |
 
-Por eso el bot arranca en tu computadora sin más: un canal que obligara a
+Por eso el bot arranca en tu ordenador sin más: un canal que obligara a
 webhook necesitaría un servidor de verdad, con dominio y certificado.
 
-**Mientras la ventana esté abierta, el bot contesta.** Si la cerrás, deja de
+**Mientras la ventana esté abierta, el bot contesta.** Si la cierras, deja de
 contestar — y los mensajes que le lleguen mientras tanto los va a atender
 cuando lo vuelvas a levantar (Telegram los guarda 24 horas).
 
-¿Querés que conteste siempre, sin tener la compu prendida? Está en
+¿Quieres que conteste siempre, sin tener el ordenador encendido? Está en
 [Dejarlo corriendo en un servidor](#servidor).
 
 ### Cada persona, su propia conversación
 
-Acá está lo que hace que esto sirva de verdad: el `chat_id` de Telegram es el
+Aquí está lo que hace que esto sirva de verdad: el `chat_id` de Telegram es el
 `thread_id` de LangGraph.
 
 ```
-vos          → chat_id 555  → tu conversación
+tú          → chat_id 555  → tu conversación
 tu hermana   → chat_id 888  → la de ella, aparte
 ```
 
@@ -778,7 +778,7 @@ es un archivo y no le gusta que varios procesos le escriban al mismo tiempo.
 
 ## 🚢 Dejarlo corriendo en un servidor
 
-Hasta acá el bot vivía mientras tu computadora estuviera prendida. Para que
+Hasta aquí el bot vivía mientras tu ordenador estuviera encendido. Para que
 conteste siempre —desde el gimnasio, de viaje, a las 3 de la mañana— tiene que
 correr en un servidor.
 
@@ -791,21 +791,21 @@ docker run -d --env-file .env --name agente agente
 
 > [!IMPORTANT]
 > **Esta imagen no expone ningún puerto, y eso confunde a casi cualquier
-> PaaS.** El bot anda por *polling*: sale él a buscar los mensajes, no entra
+> PaaS.** El bot funciona por *polling*: sale él a buscar los mensajes, no entra
 > nadie. Así que al desplegarlo el panel te va a asignar un dominio solo,
 > después le va a pegar para ver si contesta, no va a contestar nadie, y lo va
 > a marcar *unhealthy* aunque el bot esté atendiendo perfecto.
 >
-> **Borrale el dominio y dejá el health check apagado.** No está roto: es que
+> **Bórrale el dominio y deja el health check apagado.** No está roto: es que
 > con polling no hay a quién pegarle.
 
 ### Con Coolify (o cualquier PaaS que lea un Dockerfile)
 
-1. Subí el código a un repositorio (privado está bien).
-2. Creá una aplicación de tipo **Dockerfile** apuntando a ese repo.
-3. **Sacale el dominio** si te asignó uno, y **apagá el health check**.
-4. Cargá las variables en el panel — **el `.env` no se sube al repo**.
-   Acá va con clave de API: `PROVEEDOR=chatgpt` no sirve en un servidor,
+1. Sube el código a un repositorio (privado está bien).
+2. Crea una aplicación de tipo **Dockerfile** apuntando a ese repo.
+3. **Quítale el dominio** si te asignó uno, y **apaga el health check**.
+4. Carga las variables en el panel — **el `.env` no se sube al repo**.
+   Aquí va con clave de API: `PROVEEDOR=chatgpt` no sirve en un servidor,
    porque la sesión vive en tu `~/.codex` y en el contenedor no existe.
 
    ```
@@ -815,9 +815,9 @@ docker run -d --env-file .env --name agente agente
    CACHE · MAX_TOKENS · MEMORIA_MENSAJES · PROMPT_SISTEMA
    ```
 
-5. Desplegá, y escribile al bot desde tu teléfono para confirmar.
+5. Despliega, y escríbele al bot desde tu teléfono para confirmar.
 
-**Si la base de datos está en el mismo servidor**, usá el nombre interno del
+**Si la base de datos está en el mismo servidor**, usa el nombre interno del
 contenedor en el `POSTGRES_DSN` en vez de la IP pública: es más rápido y no
 sale a internet para volver a entrar.
 
@@ -828,10 +828,10 @@ SQLite vive en el disco del contenedor, y ese disco se borra en cada deploy.
 Con Postgres la memoria sobrevive a los despliegues.
 
 **Una sola instancia a la vez.** Si el bot queda corriendo en el servidor *y*
-en tu computadora, los dos le van a preguntar a Telegram por los mismos
+en tu ordenador, los dos le van a preguntar a Telegram por los mismos
 mensajes y se los van a repartir al azar: la mitad de las respuestas van a
 salir de una máquina y la otra mitad de la otra. Es la falla más confusa de
-todas, porque *parece* que anda a veces sí y a veces no. Apagá el local antes.
+todas, porque *parece* que funciona a veces sí y a veces no. Apaga el local antes.
 
 ### Cómo actualizarlo después
 
@@ -839,7 +839,7 @@ todas, porque *parece* que anda a veces sí y a veces no. Apagá el local antes.
 git push
 ```
 
-Y redesplegás desde el panel. El código nuevo entra en el próximo deploy; la
+Y redespliegas desde el panel. El código nuevo entra en el próximo deploy; la
 conversación de cada persona sigue intacta, porque vive en Postgres y no en
 el contenedor.
 
@@ -851,13 +851,13 @@ el contenedor.
 
 ## 🎭 Cambiar la personalidad
 
-Editá **`prompts/sistema.md`**, guardá, y el próximo mensaje ya sale distinto.
+Edita **`prompts/sistema.md`**, guarda, y el próximo mensaje ya sale distinto.
 **No hay que reiniciar nada**: el archivo se lee en cada mensaje.
 
-Desde la web lo tenés al costado, con un botón de guardar.
+Desde la web lo tienes al costado, con un botón de guardar.
 
-Es la forma más rápida de ver qué cambia: escribí algo, cambiá el prompt,
-volvé a escribir lo mismo.
+Es la forma más rápida de ver qué cambia: escribe algo, cambia el prompt,
+vuelve a escribir lo mismo.
 
 <br>
 
@@ -883,13 +883,13 @@ print(respuesta.tokens_entrada, respuesta.tokens_salida)
 print(respuesta.tokens_cache_leidos)   # cuánto salió del caché
 
 # Respuesta en vivo, mientras se escribe
-transmision = a.responder_en_vivo("Contame un chiste", conversacion="usuario-123")
+transmision = a.responder_en_vivo("Cuéntame un chiste", conversacion="usuario-123")
 for pedazo in transmision:
     print(pedazo, end="", flush=True)
 print(transmision.resumen.tokens_salida)
 
 # Ya partida en varios mensajes (para mensajería)
-for mensaje in a.responder_partido("Explicame cómo funciona", conversacion="usuario-123"):
+for mensaje in a.responder_partido("Explícame cómo funciona", conversacion="usuario-123"):
     print("─", mensaje)
 ```
 
@@ -963,8 +963,8 @@ HERRAMIENTAS = [clima]
 
 <br>
 
-No. Corre en tu computadora. Lo único que pagás es el consumo del modelo — y
-si usás tu suscripción de ChatGPT, ni eso (Gemini además tiene un plan gratis
+No. Corre en tu ordenador. Lo único que pagas es el consumo del modelo — y
+si usas tu suscripción de ChatGPT, ni eso (Gemini además tiene un plan gratis
 para empezar).
 
 </details>
@@ -974,7 +974,7 @@ para empezar).
 
 <br>
 
-No: poné `PROVEEDOR=chatgpt` y usa tu suscripción, sin clave y sin tarjeta.
+No: pon `PROVEEDOR=chatgpt` y usa tu suscripción, sin clave y sin tarjeta.
 Se gasta de la misma cuota que ChatGPT y Codex.
 Está todo en [Usarlo con tu suscripción de ChatGPT](#chatgpt).
 
@@ -986,7 +986,7 @@ Está todo en [Usarlo con tu suscripción de ChatGPT](#chatgpt).
 <br>
 
 Con estos proveedores no, porque el modelo corre en la nube de ellos.
-Si querés 100% local, hay que cambiar `modelos.py` para que apunte a Ollama.
+Si quieres 100% local, hay que cambiar `modelos.py` para que apunte a Ollama.
 
 </details>
 
@@ -1016,7 +1016,7 @@ mensaje. Cuatro formas de gastar menos, de mayor a menor impacto:
 </details>
 
 <details>
-<summary><b>Me tira un error y no entiendo</b></summary>
+<summary><b>Me da un error y no lo entiendo</b></summary>
 
 <br>
 
@@ -1025,9 +1025,9 @@ motivos habituales:
 
 - La clave está mal pegada (le sobra un espacio o le falta un pedazo)
 - Con `PROVEEDOR=chatgpt`: no entraste con tu cuenta, o la sesión venció.
-  Abrí la app de ChatGPT (o corré `codex login`) y volvé a probar.
-- El nombre del modelo en el `.env` no existe → elegilo de la lista
-- No tenés saldo en la cuenta del proveedor
+  Abre la app de ChatGPT (o corre `codex login`) y vuelve a probar.
+- El nombre del modelo en el `.env` no existe → elígelo de la lista
+- No tienes saldo en la cuenta del proveedor
 
 </details>
 
@@ -1062,8 +1062,8 @@ dos listas para que no se desincronicen.
 
 Sí, y los tres se ponen al día solos. El archivo **[`AGENTS.md`](AGENTS.md)**
 lo leen sin que se lo pidas: les explica la arquitectura, dónde tocar cada
-cosa, las convenciones y las trampas del código. Abrí el agente que uses en la
-carpeta y pedile lo que quieras.
+cosa, las convenciones y las trampas del código. Abre el agente que uses en la
+carpeta y pídele lo que quieras.
 
 </details>
 
@@ -1091,7 +1091,7 @@ nuevo.
 
 Publicado con licencia **[MIT](LICENSE)**.
 
-Este proyecto es un fork de **[AgentKit](https://github.com/fcori47/basdonax-ai-agentkit)**,
+**CosioNET Agent** es un fork de **[AgentKit](https://github.com/fcori47/basdonax-ai-agentkit)**,
 de [Basdonax AI](https://basdonax.com).<br>
 Los cambios de este fork —entre ellos el proveedor `chatgpt`— son de
 **[J. Ramón Blanco](https://github.com/jrcosio)**.
@@ -1101,6 +1101,6 @@ el aviso original viaja con el código.
 
 <br>
 
-<sub>⭐ Si te sirvió, dejale una estrella al repo — y también al original.</sub>
+<sub>⭐ Si te sirvió, déjale una estrella al repo — y también al original.</sub>
 
 </div>

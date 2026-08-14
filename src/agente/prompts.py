@@ -1,8 +1,8 @@
 """Carga del prompt del sistema desde un archivo de texto.
 
 El prompt vive en prompts/sistema.md, no adentro del código. Dos motivos:
-lo podés editar sin tocar Python, y se relee en cada mensaje — o sea que
-cambiás la personalidad del agente con el agente andando.
+lo puedes editar sin tocar Python, y se relee en cada mensaje — o sea que
+cambias la personalidad del agente con el agente en marcha.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 PROMPT_DE_EMERGENCIA = (
-    "Sos un asistente útil. Respondé en español, de forma clara y directa."
+    "Eres un asistente útil. Responde en español, de forma clara y directa."
 )
 
 

@@ -2,7 +2,7 @@
 
 Open-Meteo se reemplaza por datos escritos a mano: lo que se prueba es lo
 nuestro (cómo se arma el texto, qué pasa cuando algo falla), no que la API
-de ellos ande.
+de ellos funcione.
 
     pytest
 """
@@ -17,12 +17,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from agente import herramientas  # noqa: E402
 from agente.herramientas import HERRAMIENTAS, clima  # noqa: E402
 
-ROSARIO = {
-    "nombre": "Rosario",
-    "provincia": "Provincia de Santa Fe",
-    "pais": "Argentina",
-    "latitud": -32.94682,
-    "longitud": -60.63932,
+SEVILLA = {
+    "nombre": "Sevilla",
+    "provincia": "Andalucía",
+    "pais": "España",
+    "latitud": 37.38283,
+    "longitud": -5.97317,
 }
 
 MEDICION = {
@@ -37,8 +37,8 @@ MEDICION = {
 }
 
 
-def sin_internet(monkeypatch, lugar=ROSARIO, medicion=MEDICION) -> None:
-    """Deja la herramienta andando con datos inventados, sin tocar la red."""
+def sin_internet(monkeypatch, lugar=SEVILLA, medicion=MEDICION) -> None:
+    """Deja la herramienta en marcha con datos inventados, sin tocar la red."""
     monkeypatch.setattr(herramientas, "_buscar_lugar", lambda nombre: lugar)
     monkeypatch.setattr(
         herramientas, "_pedir_el_clima", lambda latitud, longitud: medicion
@@ -48,9 +48,9 @@ def sin_internet(monkeypatch, lugar=ROSARIO, medicion=MEDICION) -> None:
 def test_el_clima_sale_en_castellano_y_con_los_datos(monkeypatch):
     sin_internet(monkeypatch)
 
-    texto = clima.invoke({"lugar": "Rosario"})
+    texto = clima.invoke({"lugar": "Sevilla"})
 
-    assert "Rosario, Provincia de Santa Fe, Argentina" in texto
+    assert "Sevilla, Andalucía, España" in texto
     assert "19.1 °C" in texto
     assert "nublado" in texto, "el código 3 del WMO es cielo nublado"
     assert "83 %" in texto
@@ -70,7 +70,7 @@ def test_si_falta_un_dato_no_se_rompe(monkeypatch):
     """Open-Meteo no siempre manda todo. Lo que falta se omite, no explota."""
     sin_internet(monkeypatch, medicion={"current": {"temperature_2m": 7.0}})
 
-    texto = clima.invoke({"lugar": "Rosario"})
+    texto = clima.invoke({"lugar": "Sevilla"})
 
     assert "7.0 °C" in texto
     assert "Humedad" not in texto, "lo que no vino no se inventa ni se muestra vacío"
@@ -97,7 +97,7 @@ def test_si_se_cae_la_api_la_charla_sigue(monkeypatch):
 
     monkeypatch.setattr(herramientas, "_buscar_lugar", explota)
 
-    texto = clima.invoke({"lugar": "Rosario"})
+    texto = clima.invoke({"lugar": "Sevilla"})
 
     assert "TimeoutError" in texto
     assert "tardó demasiado" in texto
@@ -111,7 +111,7 @@ def test_el_nombre_completo_no_deja_comas_sueltas():
 
 
 def test_la_herramienta_esta_en_la_lista_que_mira_el_grafo():
-    """Si no está acá, el modelo no se entera de que existe."""
+    """Si no está aquí, el modelo no se entera de que existe."""
     assert clima in HERRAMIENTAS
 
 

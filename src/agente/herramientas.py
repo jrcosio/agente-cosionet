@@ -1,12 +1,12 @@
 """Las herramientas: lo que el agente puede hacer además de conversar.
 
 Una herramienta es una función común de Python que el modelo puede decidir
-llamar. El modelo no la ejecuta: dice "quiero llamar a clima con lugar=Rosario"
+llamar. El modelo no la ejecuta: dice "quiero llamar a clima con lugar=Sevilla"
 y LangGraph la corre y le devuelve el resultado. Por eso el **docstring importa
 tanto como el código**: es literalmente lo único que el modelo lee para decidir
 si esta herramienta le sirve y qué mandarle.
 
-Acá hay una sola: el clima.
+Aquí hay una sola: el clima.
 
 Usa **Open-Meteo** (https://open-meteo.com), que es gratis, no pide registro y
 no usa clave de API. Eso es a propósito: este repo es para probar y no queremos
@@ -16,8 +16,8 @@ tiene costo ni tarjeta.
 Son dos consultas encadenadas, porque la API del clima habla en coordenadas y
 las personas hablan en nombres de ciudades:
 
-    1. Geocoding  → "Rosario"        se convierte en  (-32.94, -60.63)
-    2. Pronóstico → (-32.94, -60.63) se convierte en  19 °C y nublado
+    1. Geocoding  → "Sevilla"       se convierte en  (37.39, -5.98)
+    2. Pronóstico → (37.39, -5.98)  se convierte en  19 °C y nublado
 
 Se usa `urllib`, de la biblioteca estándar, para no sumar una dependencia al
 requirements.txt por dos pedidos HTTP.
@@ -76,11 +76,11 @@ CIELO = {
 def clima(lugar: str) -> str:
     """Dice el clima que hace ahora mismo en una ciudad.
 
-    Usala cuando te pregunten por el clima, la temperatura, si llueve, si hace
+    Úsala cuando te pregunten por el clima, la temperatura, si llueve, si hace
     frío o calor, o si conviene salir con abrigo o paraguas.
 
     Args:
-        lugar: La ciudad, en lo posible con el país. Por ejemplo "Rosario",
+        lugar: La ciudad, en lo posible con el país. Por ejemplo "Sevilla",
             "Buenos Aires, Argentina" o "Madrid". Si hay varias ciudades con
             el mismo nombre, se toma la más conocida.
     """
@@ -89,7 +89,7 @@ def clima(lugar: str) -> str:
     # como pide AGENTS.md): si una herramienta explota, LangGraph corta toda la
     # respuesta y la persona ve un error crudo. Devolviéndolo como texto, el
     # resultado le llega al modelo, que lo cuenta con sus palabras y la
-    # conversación sigue. Ojo con la diferencia: acá no se esconde nada, el
+    # conversación sigue. Ojo con la diferencia: aquí no se esconde nada, el
     # problema igual termina en la pantalla — pero explicado y sin voltear la
     # charla. Los errores del *proveedor* siguen saliendo tal cual: esto es
     # una consulta a Open-Meteo, no al modelo.
@@ -112,7 +112,7 @@ def clima(lugar: str) -> str:
     return _redactar(encontrado, datos)
 
 
-# Lo que el agente tiene atado. Cuando agregues otra herramienta, sumala acá:
+# Lo que el agente tiene atado. Cuando agregues otra herramienta, súmala aquí:
 # es la única lista que mira el grafo.
 HERRAMIENTAS = [clima]
 
@@ -155,7 +155,7 @@ def _pedir_el_clima(latitud: float, longitud: float) -> dict:
                 "weather_code,wind_speed_10m"
             ),
             # timezone=auto hace que la hora venga en la del lugar consultado,
-            # no en la nuestra. Si preguntás por Tokio querés la hora de Tokio.
+            # no en la nuestra. Si preguntas por Tokio quieres la hora de Tokio.
             "timezone": "auto",
         },
     )
@@ -206,7 +206,7 @@ def _redactar(lugar: dict, datos: dict) -> str:
 
 
 def _nombre_completo(lugar: dict) -> str:
-    """"Rosario, Provincia de Santa Fe, Argentina" — sin comas de más."""
+    """"Sevilla, Andalucía, España" — sin comas de más."""
     return ", ".join(
         p for p in (lugar.get("nombre"), lugar.get("provincia"), lugar.get("pais")) if p
     )

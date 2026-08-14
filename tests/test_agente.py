@@ -26,7 +26,7 @@ class ModeloFalso(GenericFakeChatModel):
 
     GenericFakeChatModel no implementa bind_tools() y el grafo lo llama al
     construirse, así que sin esto no arranca ni un test. Como el modelo falso
-    devuelve texto fijo y nunca pide una herramienta, alcanza con que se
+    devuelve texto fijo y nunca pide una herramienta, basta con que se
     devuelva a sí mismo.
     """
 
@@ -130,13 +130,13 @@ def conversacion_con_herramienta() -> list:
         HumanMessage("hola"),
         AIMessage("buenas"),
 
-        HumanMessage("¿qué clima hace en Rosario?"),
+        HumanMessage("¿qué tiempo hace en Sevilla?"),
         AIMessage(
             "",
-            tool_calls=[{"name": "clima", "args": {"lugar": "Rosario"}, "id": "abc"}],
+            tool_calls=[{"name": "clima", "args": {"lugar": "Sevilla"}, "id": "abc"}],
         ),
-        ToolMessage("Clima en Rosario: 19.1 °C", tool_call_id="abc"),
-        AIMessage("En Rosario hay 19 grados y está nublado."),
+        ToolMessage("Clima en Sevilla: 19.1 °C", tool_call_id="abc"),
+        AIMessage("En Sevilla hay 19 grados y está nublado."),
 
         HumanMessage("gracias"),
         AIMessage("de nada"),
@@ -169,7 +169,7 @@ def test_el_recorte_no_parte_una_vuelta_de_herramienta(tope):
 
     Recortando por mensajes sueltos, tarde o temprano el corte cae en el medio
     de una vuelta de herramienta y deja el pedido sin su resultado. El
-    proveedor responde un 400 que no explica nada, y recién aparece cuando la
+    proveedor responde un 400 que no explica nada, y solo aparece cuando la
     conversación se hizo larga. Probamos todos los topes para que no haya un
     número que lo rompa.
     """
@@ -273,7 +273,7 @@ def test_la_conexion_de_postgres_no_se_la_lleva_el_recolector(monkeypatch):
     `with Connection.connect(...)`. Si nadie se guarda una referencia, el
     recolector de basura lo destruye, y destruirlo cierra la conexión.
 
-    No falla al conectar —ahí anda todo— sino en el primer mensaje que llega
+    No falla al conectar —ahí funciona todo— sino en el primer mensaje que llega
     después, con un "the connection is closed" que no se parece en nada a su
     causa. En un script corto ni se nota, porque el proceso termina antes de
     que el recolector actúe.
@@ -282,7 +282,7 @@ def test_la_conexion_de_postgres_no_se_la_lleva_el_recolector(monkeypatch):
     from contextlib import contextmanager
 
     # El paquete de Postgres está en el grupo `produccion`, que no se instala
-    # solo (`uv sync --group produccion`). Sin él este test se saltea en vez de
+    # solo (`uv sync --group produccion`). Sin él este test se salta en vez de
     # fallar: la falta de una dependencia opcional no es un test roto.
     postgres_de_langgraph = pytest.importorskip(
         "langgraph.checkpoint.postgres",
@@ -331,13 +331,13 @@ def test_modo_invalido_avisa(monkeypatch):
 def test_olvidar_borra_de_verdad():
     """El botón "borrar conversación" tiene que borrar.
 
-    No alcanza con crear un agente nuevo: la conversación vive en el
+    No basta con crear un agente nuevo: la conversación vive en el
     checkpointer, así que si no se borra de ahí, el agente nuevo la levanta
     igual y el botón miente.
     """
-    a = agente_falso(["hola", "te llamas Facu", "no se como te llamas"])
+    a = agente_falso(["hola", "te llamas Javi", "no se como te llamas"])
 
-    a.responder("me llamo Facu")
+    a.responder("me llamo Javi")
     assert len(a.historial()) == 2
 
     a.olvidar()

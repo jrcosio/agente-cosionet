@@ -1,7 +1,7 @@
 """Que la terminal no se rompa con las tildes.
 
 En Windows, la consola arranca con una codificación vieja (cp1252) que no
-sabe escribir ni una "í". Si imprimís algo con tilde, el programa se cae
+sabe escribir ni una "í". Si imprimes algo con tilde, el programa se cae
 con UnicodeEncodeError antes de hacer nada.
 
 Esta función se llama al principio de chat.py y de servidor.py.

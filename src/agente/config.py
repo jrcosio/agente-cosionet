@@ -3,9 +3,9 @@
 Todo sale del archivo .env. Nada de credenciales escritas en el código.
 
 Con una excepción, y es la del proveedor `chatgpt`: ese no usa una clave de
-API sino tu suscripción de ChatGPT, y esa credencial no la pegás vos en
-ningún lado — la escribe Codex cuando entrás con tu cuenta. La leemos en
-`sesion_chatgpt.py` y entra al resto del programa por acá, igual que las
+API sino tu suscripción de ChatGPT, y esa credencial no la pegas tú en
+ningún lado — la escribe Codex cuando entras con tu cuenta. La leemos en
+`sesion_chatgpt.py` y entra al resto del programa por aquí, igual que las
 otras: para `Agente` sigue siendo `config.api_key` y nada más.
 """
 
@@ -46,7 +46,7 @@ CLAVE_POR_PROVEEDOR = {
 
 MODELOS_POR_DEFECTO = {
     # Sol es el que Codex ofrece primero. Los otros dos son Terra (equilibrado)
-    # y Luna (el rápido); en la plataforma los elegís de la lista.
+    # y Luna (el rápido); en la plataforma los eliges de la lista.
     "chatgpt": "gpt-5.6-sol",
     "claude": "claude-opus-5",
     "openai": "gpt-5",
@@ -70,7 +70,7 @@ class Config:
     cache: bool = True
     sqlite_ruta: str = "datos/conversaciones.db"
     postgres_dsn: str = ""
-    # Vacío mientras el agente corra solo en la computadora. Lo usa el bot
+    # Vacío mientras el agente corra solo en el ordenador. Lo usa el bot
     # de Telegram; el resto del proyecto ni lo mira.
     telegram_token: str = ""
 
@@ -90,11 +90,11 @@ class Config:
         if proveedor not in PROVEEDORES_VALIDOS:
             raise ErrorDeConfiguracion(
                 f"El proveedor '{proveedor}' no existe. "
-                f"Elegí uno de: {', '.join(PROVEEDORES_VALIDOS)}."
+                f"Elige uno de: {', '.join(PROVEEDORES_VALIDOS)}."
             )
 
         if proveedor == "chatgpt":
-            # Acá no hay nada que completar en el .env: la credencial es la
+            # Aquí no hay nada que completar en el .env: la credencial es la
             # sesión de Codex. Si no sirve, el error dice qué hacer.
             try:
                 api_key = sesion_chatgpt.sesion_usable().token
@@ -107,7 +107,7 @@ class Config:
             if not api_key:
                 raise ErrorDeConfiguracion(
                     f"Falta la clave de {proveedor}. "
-                    f"Abrí el archivo .env y completá {nombre_clave}."
+                    f"Abre el archivo .env y completa {nombre_clave}."
                 )
 
         modelo = (

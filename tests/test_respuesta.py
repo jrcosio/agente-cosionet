@@ -20,8 +20,8 @@ def test_vacio_no_manda_nada():
 
 
 def test_respeta_los_renglones_en_blanco():
-    texto = "Hola.\n\n¿Qué necesitás?\n\nAvisame."
-    assert partir_respuesta(texto) == ["Hola.", "¿Qué necesitás?", "Avisame."]
+    texto = "Hola.\n\n¿Qué necesitas?\n\nAvísame."
+    assert partir_respuesta(texto) == ["Hola.", "¿Qué necesitas?", "Avísame."]
 
 
 def test_un_salto_simple_no_parte():

@@ -1,8 +1,8 @@
-"""La sesión de ChatGPT: de acá sale la credencial del proveedor `chatgpt`.
+"""La sesión de ChatGPT: de aquí sale la credencial del proveedor `chatgpt`.
 
-Los otros tres proveedores se autentican con una clave de API que vos pegás
+Los otros tres proveedores se autentican con una clave de API que tú pegas
 en el `.env` y que se paga por token. Este no: usa **tu suscripción de
-ChatGPT**. La credencial la escribe Codex cuando entrás con tu cuenta, y
+ChatGPT**. La credencial la escribe Codex cuando entras con tu cuenta, y
 queda en `~/.codex/auth.json`. Nosotros la leemos de ahí.
 
 Por eso este archivo es la única excepción a la regla de que las claves se
@@ -16,7 +16,7 @@ Lo que hace:
     credencial()          → el token, o cadena vacía si no sirve
     modelos_disponibles() → qué modelos ofrece la suscripción hoy
 
-**Acá no se cachea nada a propósito.** Codex rota el token cada tanto y
+**Aquí no se cachea nada a propósito.** Codex rota el token cada tanto y
 reescribe el archivo; si nos guardáramos el primero, un proceso que vive
 días (el bot de Telegram) seguiría mandando el viejo y de golpe empezaría a
 comer 401 sin razón aparente. El archivo son cuatro kilobytes: releerlo sale
@@ -55,17 +55,17 @@ ESPERA_DE_RED = 20
 MARGEN_DE_VENCIMIENTO = 60
 
 # El mismo mensaje para los dos lugares que lo necesitan (config.py cuando
-# arma el agente, modelo_chatgpt.py cuando ya está andando). Que sea uno solo
+# arma el agente, modelo_chatgpt.py cuando ya está en marcha). Que sea uno solo
 # es lo que hace que la explicación no se desincronice.
 AVISO_SIN_SESION = (
     "No encontré una sesión de ChatGPT en "
-    f"{CARPETA_CODEX / 'auth.json'}. Abrí la app de ChatGPT (o corré "
-    "'codex login') y entrá con tu cuenta; con eso ya podés usar "
+    f"{CARPETA_CODEX / 'auth.json'}. Abre la app de ChatGPT (o corre "
+    "'codex login') y entra con tu cuenta; con eso ya puedes usar "
     "PROVEEDOR=chatgpt."
 )
 
 AVISO_SESION_VENCIDA = (
-    "La sesión de ChatGPT venció. Abrí la app de ChatGPT (o corré "
+    "La sesión de ChatGPT venció. Abre la app de ChatGPT (o corre "
     "'codex login') para renovarla: Codex lo hace solo con usarlo."
 )
 
@@ -196,7 +196,7 @@ def modelos_disponibles(sesion: Sesion) -> list[dict]:
 
 
 def _version_de_codex() -> str:
-    """La versión de Codex que tenés instalada.
+    """La versión de Codex que tienes instalada.
 
     El endpoint de modelos la pide y la usa para decidir qué te muestra: con
     una versión vieja devuelve una lista corta. La leemos de lo que Codex ya

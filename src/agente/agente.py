@@ -5,9 +5,9 @@ son tres cosas juntas:
 
     1. Un prompt de sistema  → quién es y cómo se comporta
     2. Una memoria           → de qué vienen hablando
-    3. Un modelo             → a quién le mandás las dos cosas de arriba
+    3. Un modelo             → a quién le mandas las dos cosas de arriba
 
-Con LangGraph esas tres cosas se arman como un grafo. Acá el grafo es un ciclo
+Con LangGraph esas tres cosas se arman como un grafo. Aquí el grafo es un ciclo
 de dos nodos:
 
     modelo → ¿pidió una herramienta?
@@ -19,7 +19,7 @@ responde. Las herramientas viven en herramientas.py.
 
 El agente no sabe si lo están usando desde la terminal, desde la web o desde
 Telegram. Recibe texto y devuelve texto. Esa frontera es lo que después
-permite enchufarlo a cualquier canal sin tocar una línea de acá adentro.
+permite enchufarlo a cualquier canal sin tocar una línea de aquí adentro.
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ class Transmision:
     Por qué existe, en vez de guardar el resumen en el agente: porque el
     mismo agente puede estar atendiendo varias conversaciones al mismo
     tiempo. Si el resumen viviera en el agente, dos conversaciones que
-    responden a la vez se pisarían los datos. Acá cada transmisión tiene
+    responden a la vez se pisarían los datos. Aquí cada transmisión tiene
     el suyo.
     """
 
@@ -152,7 +152,7 @@ class Agente:
         """Prompt de sistema + los últimos mensajes de la conversación.
 
         El prompt se lee del archivo en CADA mensaje, no una sola vez al
-        arrancar: por eso podés editar prompts/sistema.md sin reiniciar.
+        arrancar: por eso puedes editar prompts/sistema.md sin reiniciar.
         """
         recientes = _recortar(estado["messages"], self.config.memoria_mensajes)
         return [self._sistema(), *recientes]
@@ -165,11 +165,11 @@ class Agente:
         te cobre una fracción a partir del segundo mensaje.
 
         Cada proveedor lo maneja distinto:
-          · Claude → hay que marcarlo a mano (es lo que hacemos acá abajo)
+          · Claude → hay que marcarlo a mano (es lo que hacemos aquí abajo)
           · OpenAI → automático, no hay que hacer nada
           · Gemini → automático, no hay que hacer nada
 
-        Ojo: el caché recién se activa cuando el prompt supera cierto tamaño
+        Ojo: el caché solo se activa cuando el prompt supera cierto tamaño
         (más o menos 1.000 tokens). Con un prompt corto no pasa nada malo,
         simplemente no se cachea.
         """
@@ -191,10 +191,10 @@ class Agente:
     # -- Lo que usa todo el mundo --------------------------------------------
 
     def responder(self, texto: str, conversacion: str = "local") -> Respuesta:
-        """Le mandás un mensaje, te devuelve la respuesta completa.
+        """Le mandas un mensaje, te devuelve la respuesta completa.
 
         `conversacion` es el thread_id de LangGraph: cada valor distinto es
-        una conversación separada, con su propia memoria. En Telegram acá va
+        una conversación separada, con su propia memoria. En Telegram aquí va
         el chat_id de la persona.
         """
         salida = self.grafo.invoke(
@@ -208,7 +208,7 @@ class Agente:
     ) -> Transmision:
         """Igual que responder(), pero el texto llega mientras se escribe.
 
-        Devuelve una Transmision: la recorrés con un for y al terminar tenés
+        Devuelve una Transmision: la recorres con un for y al terminar tienes
         el resumen (tokens, modelo) en `.resumen`.
         """
         # Cada transmisión guarda su propio acumulado. Nada de estado en el
@@ -221,7 +221,7 @@ class Agente:
                 config=self._config_hilo(conversacion),
                 stream_mode="messages",
             ):
-                # Por acá también pasa lo que devuelven las herramientas, y eso
+                # Por aquí también pasa lo que devuelven las herramientas, y eso
                 # no es la respuesta: es materia prima para que el modelo la
                 # escriba. Si lo dejáramos salir, la persona vería el listado
                 # crudo del clima en pantalla y después la respuesta de verdad.
@@ -230,7 +230,7 @@ class Agente:
 
                 # Los pedazos de LangChain se suman entre sí. Al sumarlos
                 # vamos rearmando el mensaje entero, con el conteo de tokens
-                # incluido (que en varios proveedores llega recién al final).
+                # incluido (que en varios proveedores llega solo al final).
                 # Cuando hay herramientas el modelo habla dos veces, así que
                 # esta suma termina juntando el gasto de las dos llamadas:
                 # que es justo lo que costó la respuesta.
@@ -269,8 +269,8 @@ class Agente:
     def olvidar(self, conversacion: str = "local") -> None:
         """Borra de verdad una conversación: el agente arranca de cero con esa persona.
 
-        Ojo: no alcanza con crear un agente nuevo. La conversación no vive en
-        el agente, vive en el checkpointer — si no la borrás de ahí, el agente
+        Ojo: no basta con crear un agente nuevo. La conversación no vive en
+        el agente, vive en el checkpointer — si no la borras de ahí, el agente
         nuevo la vuelve a levantar y parece que no pasó nada.
         """
         self.checkpointer.delete_thread(conversacion)
@@ -285,13 +285,13 @@ class Agente:
 def _recortar(mensajes: list, tope: int) -> list:
     """Los últimos mensajes de la conversación, cortando en un turno completo.
 
-    Acá había un trim_messages() de LangChain, que recorta contando mensajes
+    Aquí había un trim_messages() de LangChain, que recorta contando mensajes
     sueltos. Con herramientas eso se rompe, y es la trampa más cara de este
     proyecto: una vuelta de herramienta son tres mensajes atados entre sí
     (el modelo la pide, la herramienta contesta, el modelo responde), y los
     proveedores exigen que estén los tres. Si el corte cae justo en el medio y
     deja un pedido sin su resultado, la API devuelve un 400 que no explica
-    nada y aparece recién cuando la conversación se hizo larga.
+    nada y aparece solo cuando la conversación se hace larga.
 
     Por eso no recortamos por mensaje sino por turno: agrupamos y siempre
     entran o salen enteros. `tope` sigue siendo en mensajes (MEMORIA_MENSAJES),
@@ -304,7 +304,7 @@ def _recortar(mensajes: list, tope: int) -> list:
 
     for turno in reversed(turnos):
         # El turno más nuevo entra siempre, aunque se pase del tope: es la
-        # pregunta que estamos respondiendo recién ahora. Dejarlo afuera por
+        # pregunta que estamos respondiendo ahora mismo. Dejarlo afuera por
         # el presupuesto sería mandarle al modelo una conversación sin la
         # consulta — o peor, partida justo por la mitad de una herramienta.
         if elegidos and total + len(turno) > tope:

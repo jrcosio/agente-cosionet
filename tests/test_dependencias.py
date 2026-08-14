@@ -11,12 +11,12 @@ porque están comentados como material de lectura). Pero dos listas que hay que
 mantener a mano se desincronizan siempre, y el día que pase, el que instaló
 con pip va a tener un error que el otro no puede reproducir.
 
-Este archivo es el que no lo deja pasar. Si agregás una dependencia en un
-lado y te olvidás del otro, falla acá y no en la máquina de otra persona.
+Este archivo es el que no lo deja pasar. Si agregas una dependencia en un
+lado y te olvidas del otro, falla aquí y no en la máquina de otra persona.
 
     pytest
 
-Ojo: `tomllib` entró en Python 3.11. En 3.10 estos tests se saltean solos —
+Ojo: `tomllib` entró en Python 3.11. En 3.10 estos tests se saltan solos —
 el proyecto sigue soportando 3.10, pero para leer un TOML sin sumar una
 dependencia hace falta 3.11.
 """
@@ -84,7 +84,7 @@ def test_el_paquete_no_se_instala():
     """`package = false` es lo que mantiene en pie el sys.path.insert("src").
 
     Si algún día alguien saca esta línea, uv va a empezar a instalar el
-    proyecto como paquete en cada sync. Andaría igual, pero dejaría dos copias
+    proyecto como paquete en cada sync. Funcionaría igual, pero dejaría dos copias
     del código en juego —la instalada y la de src/— y basta con no hacer un
     sync para estar editando una y ejecutando la otra. Es de los errores más
     difíciles de ver.
@@ -92,7 +92,7 @@ def test_el_paquete_no_se_instala():
     assert pyproject()["tool"]["uv"]["package"] is False
 
 
-def test_sigue_andando_en_310():
+def test_sigue_funcionando_en_310():
     """El README promete 3.10. Si eso cambia, que cambie a propósito."""
     assert pyproject()["project"]["requires-python"] == ">=3.10"
 
@@ -101,8 +101,8 @@ def test_tu_python_y_el_del_contenedor_son_el_mismo():
     """`.python-version` y el `FROM` del Dockerfile tienen que coincidir.
 
     Son dos archivos que dicen la misma cosa en dos lados: con qué Python
-    corre esto. Si se separan, desarrollás en uno y desplegás en otro, y el
-    día que aparezca una diferencia de versión nadie va a mirar acá.
+    corre esto. Si se separan, desarrollas en uno y despliegas en otro, y el
+    día que aparezca una diferencia de versión nadie va a mirar aquí.
 
     (El Dockerfile no copia el `.python-version` a propósito —adentro la fija
     la imagen base—, así que un desajuste no rompe el build: pasa callado. Por

@@ -1,4 +1,4 @@
-"""Los modelos: acá se elige con qué proveedor y con qué modelo habla el agente.
+"""Los modelos: aquí se elige con qué proveedor y con qué modelo habla el agente.
 
 LangChain envuelve a todos los proveedores en la misma interfaz (BaseChatModel),
 así que el resto del código no sabe ni le importa si adentro hay Claude,
@@ -23,8 +23,8 @@ Lo segundo existe para no dejar una lista escrita a mano que envejece: los
 proveedores sacan modelos nuevos todo el tiempo y la plataforma de pruebas
 los muestra apenas salen.
 
-Los import van adentro de cada rama a propósito: así podés borrar del
-requirements.txt los paquetes que no usás y el agente arranca igual.
+Los import van adentro de cada rama a propósito: así puedes borrar del
+requirements.txt los paquetes que no usas y el agente arranca igual.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def crear_modelo(
     if proveedor == "chatgpt":
         # Esta rama va antes de limitar_max_tokens() a propósito: la
         # suscripción no acepta que le pidas un tope de salida, así que no hay
-        # ningún tope que ajustar y salir a consultarlo sería al vicio.
+        # ningún tope que ajustar y salir a consultarlo sería en balde.
         try:
             from .modelo_chatgpt import crear_modelo_chatgpt
         except ImportError:
@@ -109,7 +109,7 @@ def crear_modelo(
             # La otra salida que ofrece el error es apagarle el razonamiento
             # al modelo, que es pagar por un modelo y usar otro. Así que
             # vamos por el endpoint nuevo, que es además el que OpenAI
-            # recomienda de acá en adelante. El streaming, el conteo de
+            # recomienda de aquí en adelante. El streaming, el conteo de
             # tokens y el tope de salida siguen funcionando igual.
             use_responses_api=True,
         )
@@ -130,7 +130,7 @@ def crear_modelo(
         )
 
     raise ValueError(
-        f"No conozco el proveedor '{proveedor}'. Usá: {', '.join(PROVEEDORES)}."
+        f"No conozco el proveedor '{proveedor}'. Usa: {', '.join(PROVEEDORES)}."
     )
 
 
@@ -158,7 +158,7 @@ def limitar_max_tokens(
 def _tope_de(modelos: list[dict], buscado: str) -> int | None:
     """Encuentra el tope de salida de un modelo dentro de la lista.
 
-    No alcanza con comparar el nombre tal cual: los proveedores publican
+    No basta con comparar el nombre tal cual: los proveedores publican
     tanto el alias corto ("claude-haiku-4-5") como el que lleva la fecha
     ("claude-haiku-4-5-20251001"), y no siempre coinciden con el que pusiste
     en el .env. Si hay varios candidatos, nos quedamos con el tope más chico,
@@ -178,7 +178,7 @@ def _tope_de(modelos: list[dict], buscado: str) -> int | None:
 
 
 # La lista de modelos de un proveedor no cambia en el medio de una corrida:
-# la pedimos una vez y la guardamos acá.
+# la pedimos una vez y la guardamos aquí.
 _recordados: dict[tuple[str, str], list[dict]] = {}
 
 
@@ -188,12 +188,12 @@ def listar_modelos(proveedor: str, api_key: str) -> list[dict]:
     Cada elemento es {"id", "nombre", "max_salida"}, del más nuevo al más viejo.
 
     `max_salida` es cuántos tokens puede escribir ese modelo como máximo en una
-    respuesta. Cambia bastante entre modelos, y si le pedís más de lo que
+    respuesta. Cambia bastante entre modelos, y si le pides más de lo que
     aguanta, la llamada falla. Por eso la plataforma lo usa para ajustar el
-    tope sola cuando cambiás de modelo. Es None si el proveedor no lo informa.
+    tope sola cuando cambias de modelo. Es None si el proveedor no lo informa.
 
     Si la consulta falla (sin internet, clave vencida), devuelve lista vacía:
-    la plataforma sigue andando con lo que diga el .env.
+    la plataforma sigue funcionando con lo que diga el .env.
     """
     proveedor = proveedor.strip().lower()
     guardado = _recordados.get((proveedor, api_key))

@@ -10,9 +10,9 @@ de cada conversación (identificada por un thread_id) y lo vuelve a cargar solo.
     thread_id     = una conversación
     checkpointer  = dónde se guardan esas conversaciones
 
-En el .env elegís con una variable:
+En el .env eliges con una variable:
 
-    MODO=test        → SQLite, un archivo en tu computadora. Cero instalación.
+    MODO=test        → SQLite, un archivo en tu ordenador. Cero instalación.
     MODO=produccion  → Postgres. Para cuando hay varios procesos atendiendo.
 
 Y hay una tercera, `ram()`, que no se guarda en ningún lado: sirve para los
@@ -62,7 +62,7 @@ def ram() -> "BaseCheckpointSaver":
 def sqlite(ruta: str = "datos/conversaciones.db") -> "BaseCheckpointSaver":
     """Memoria en un archivo. Sobrevive al reinicio. → MODO=test
 
-    Un archivo, cero servidores. Alcanza de sobra para desarrollar y para un
+    Un archivo, cero servidores. Sobra para desarrollar y para un
     bot chico de Telegram con un solo proceso atendiendo.
     """
     import sqlite3
@@ -100,7 +100,7 @@ def postgres(dsn: str) -> "BaseCheckpointSaver":
         ) from None
 
     # La conexión queda abierta mientras viva el proceso: si la cerráramos
-    # acá, el checkpointer dejaría de funcionar en el primer mensaje.
+    # aquí, el checkpointer dejaría de funcionar en el primer mensaje.
     contexto = PostgresSaver.from_conn_string(dsn)
     guardador = contexto.__enter__()
     guardador.setup()
@@ -109,7 +109,7 @@ def postgres(dsn: str) -> "BaseCheckpointSaver":
     # un objeto cualquiera: es un generador (`with Connection.connect(...) as
     # conn: yield ...`). Si `contexto` se queda sin referencias al salir de
     # esta función, el recolector de basura lo destruye, y destruirlo ejecuta
-    # el cierre del `with` — o sea, **cierra la conexión**. No falla acá:
+    # el cierre del `with` — o sea, **cierra la conexión**. No falla aquí:
     # falla más tarde, con un "the connection is closed" en el primer mensaje
     # que llega, cuando ya nadie se acuerda de esta línea.
     #
@@ -117,7 +117,7 @@ def postgres(dsn: str) -> "BaseCheckpointSaver":
     # vive la memoria del agente.
     #
     # Ojo con probar esto en un script corto: si el proceso termina enseguida,
-    # el recolector no llega a actuar y parece que anda igual. Se nota recién
+    # el recolector no llega a actuar y parece que funciona igual. Se nota solo
     # cuando el agente queda corriendo un rato, como en el bot de Telegram.
     guardador._contexto_abierto = contexto
 

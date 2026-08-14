@@ -5,7 +5,7 @@
 #
 #  Con uv este archivo no hace falta:  uv sync
 #
-#  Sigue acá para quien no tenga uv (y porque está comentado para leerse). La
+#  Sigue aquí para quien no tenga uv (y porque está comentado para leerse). La
 #  lista de verdad, la que resuelve el uv.lock, vive en pyproject.toml, y
 #  tests/test_dependencias.py se encarga de que las dos digan lo mismo.
 # ---------------------------------------------------------------------------
@@ -23,7 +23,7 @@ langgraph-checkpoint>=4.1,<5
 langgraph-checkpoint-sqlite>=3.1,<4   # la memoria de MODO=test
 
 # --- Proveedores de modelos ------------------------------------------------
-# Podés borrar los que no vayas a usar.
+# Puedes borrar los que no vayas a usar.
 langchain-anthropic>=1.5,<2      # Claude
 langchain-openai>=1.4,<2         # OpenAI, y también la suscripción de ChatGPT
 langchain-google-genai>=4.3,<5   # Gemini
@@ -39,7 +39,7 @@ uvicorn>=0.30,<1
 python-dotenv>=1.0,<2
 
 # --- Solo para MODO=produccion ---------------------------------------------
-# Descomentá estas dos líneas cuando pases a Postgres.
+# Descomenta estas dos líneas cuando pases a Postgres.
 #
 # Ojo con la versión: la serie 2.x arrastra un langgraph-checkpoint viejo que
 # se pelea con el langgraph de arriba. Tiene que ser 3.x.

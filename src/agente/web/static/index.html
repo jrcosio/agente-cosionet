@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AgentKit — plataforma de pruebas</title>
+<title>CosioNET Agent — plataforma de pruebas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -36,7 +36,8 @@
   .marca{display:flex; align-items:center; gap:11px; margin-right:auto}
   .punto{width:9px;height:9px;border-radius:50%;background:var(--ambar);
     box-shadow:0 0 12px var(--ambar); flex:none}
-  .marca h1{font-size:14px; font-weight:700; letter-spacing:-.01em}
+  .marca h1{font-size:14px; font-weight:700; letter-spacing:-.01em;
+    white-space:nowrap}
   .marca span{font-size:11px; color:var(--tenue); font-family:var(--mono)}
 
   .grupo{display:flex; align-items:center; gap:7px}
@@ -221,7 +222,7 @@
     <div class="marca">
       <div class="punto"></div>
       <div>
-        <h1>AgentKit</h1>
+        <h1>CosioNET Agent</h1>
         <span>plataforma de pruebas</span>
       </div>
     </div>
@@ -248,12 +249,12 @@
 
       <div class="mensajes" id="mensajes">
         <div class="vacio" id="vacio">
-          <h2>Probá el agente</h2>
-          <p>Escribí abajo. Arriba cambiás de modelo sin reiniciar,
-             y a la derecha editás su personalidad.</p>
+          <h2>Prueba el agente</h2>
+          <p>Escribe abajo. Arriba cambias de modelo sin reiniciar,
+             y a la derecha editas su personalidad.</p>
           <div class="sugerencias">
-            <div class="sugerencia">Hola, ¿quién sos?</div>
-            <div class="sugerencia">Me llamo Facu, acordate</div>
+            <div class="sugerencia">Hola, ¿quién eres?</div>
+            <div class="sugerencia">Me llamo Javi, acuérdate</div>
             <div class="sugerencia">¿Cómo me llamo?</div>
           </div>
         </div>
@@ -261,7 +262,7 @@
 
       <div class="entrada">
         <div class="caja">
-          <textarea id="entrada" rows="1" placeholder="Escribí un mensaje…"></textarea>
+          <textarea id="entrada" rows="1" placeholder="Escribe un mensaje…"></textarea>
           <button class="btn primario" id="btnEnviar">Enviar</button>
         </div>
         <div class="pie">
@@ -275,7 +276,7 @@
       <div class="cabecera">
         <h2>Prompt del sistema</h2>
         <div class="ayuda">Quién es el agente y cómo se comporta.
-          Se relee en cada mensaje: guardás y el próximo ya sale distinto.</div>
+          Se relee en cada mensaje: guardas y el próximo ya sale distinto.</div>
         <div class="ruta" id="rutaPrompt"></div>
       </div>
       <div class="editor">
@@ -297,7 +298,7 @@ const NOMBRES = { claude: 'Claude', openai: 'OpenAI', gemini: 'Gemini', chatgpt:
 // Qué le falta a cada proveedor cuando el botón está apagado. ChatGPT es el
 // único que no se arregla en el .env: ese va con tu suscripción.
 const FALTA = {
-  chatgpt: 'Entrá con tu cuenta en la app de ChatGPT (o corré: codex login)',
+  chatgpt: 'Entra con tu cuenta en la app de ChatGPT (o corre: codex login)',
 };
 const FALTA_POR_DEFECTO = 'Falta la clave en el .env';
 
@@ -404,10 +405,10 @@ function pintarAviso(e) {
   aviso.innerHTML = e.hay_alguno
     ? `<strong>Ojo:</strong> ${e.error}`
     : `<strong>Todavía no hay ningún proveedor listo.</strong><br>
-       Copiá <code>.env.example</code> como <code>.env</code> y poné la clave
-       de uno solo. Con eso alcanza: recargá la página y listo.<br>
-       Si tenés suscripción de ChatGPT no hace falta ninguna clave: entrá con
-       tu cuenta en la app de ChatGPT y usá el botón <code>ChatGPT</code>.`;
+       Copia <code>.env.example</code> como <code>.env</code> y pon la clave
+       de uno solo. Con eso basta: recarga la página y listo.<br>
+       Si tienes suscripción de ChatGPT no hace falta ninguna clave: entra con
+       tu cuenta en la app de ChatGPT y usa el botón <code>ChatGPT</code>.`;
 }
 
 function pintarMemoria(n) {
@@ -502,7 +503,7 @@ async function enviar() {
   $('entrada').value = '';
   $('entrada').style.height = 'auto';
 
-  agregarMensaje('usuario', 'Vos', texto);
+  agregarMensaje('usuario', 'Tú', texto);
 
   const div = agregarMensaje('agente', NOMBRES[proveedor] ?? 'Agente');
   const burbuja = div.querySelector('.burbuja');

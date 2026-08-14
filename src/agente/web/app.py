@@ -28,10 +28,10 @@ from ..prompts import guardar_prompt, leer_prompt
 
 ESTATICOS = Path(__file__).parent / "static"
 
-app = FastAPI(title="AgentKit — plataforma de pruebas")
+app = FastAPI(title="CosioNET Agent — plataforma de pruebas")
 
 # Un agente vivo por vez. La conversación se identifica con un thread_id
-# (acá siempre "web"); en Telegram sería el chat de cada persona.
+# (aquí siempre "web"); en Telegram sería el chat de cada persona.
 CONVERSACION = "web"
 
 _agente: Agente | None = None
@@ -74,7 +74,7 @@ class PromptEntrante(BaseModel):
 class AjustesEntrantes(BaseModel):
     """Lo que la plataforma puede cambiar.
 
-    El modo (siempre test) y el caché (siempre activado) no están acá: se
+    El modo (siempre test) y el caché (siempre activado) no están aquí: se
     cambian editando el .env a mano. El máximo de respuesta tampoco lo elige
     el usuario — lo manda la plataforma según lo que aguanta cada modelo.
     """
@@ -95,7 +95,7 @@ def inicio() -> FileResponse:
 
 @app.get("/api/estado")
 def estado() -> dict:
-    """Qué proveedores están configurados y con qué está andando el agente."""
+    """Qué proveedores están configurados y con qué está funcionando el agente."""
     disponibles = proveedores_disponibles()
 
     try:
@@ -192,9 +192,9 @@ def ajustes(entrada: AjustesEntrantes) -> dict:
 def reiniciar() -> dict:
     """Borra la conversación de verdad.
 
-    Ojo: no alcanza con tirar el agente y crear otro. La conversación no vive
-    en el agente, vive en el checkpointer: si no la borrás de ahí, el agente
-    nuevo la vuelve a levantar y el botón parece andar pero no hizo nada.
+    Ojo: no basta con tirar el agente y crear otro. La conversación no vive
+    en el agente, vive en el checkpointer: si no la borras de ahí, el agente
+    nuevo la vuelve a levantar y el botón parece funcionar pero no ha hecho nada.
     """
     if _agente is not None:
         _agente.olvidar(CONVERSACION)

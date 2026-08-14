@@ -2,8 +2,8 @@
 
 La suscripción atiende en el mismo dialecto que la API de OpenAI —la
 *Responses API*— así que no hace falta escribir un modelo desde cero:
-alcanza con `ChatOpenAI` mirando a otra dirección. Streaming, herramientas,
-conteo de tokens y caché siguen andando igual.
+basta con `ChatOpenAI` mirando a otra dirección. Streaming, herramientas,
+conteo de tokens y caché siguen funcionando igual.
 
 Lo que sí hace falta es acomodar tres cosas que ese endpoint pide distinto, y
 eso es **todo** lo que hay en este archivo:
@@ -19,7 +19,7 @@ eso es **todo** lo que hay en este archivo:
 
 Nada de esto está en la documentación de nadie: son las reglas del canal de
 Codex, que es un cliente propio y no una API con contrato público. **Si algún
-día la suscripción empieza a fallar sin que hayas tocado nada, es acá donde
+día la suscripción empieza a fallar sin que hayas tocado nada, es aquí donde
 hay que mirar.** Con la clave de API (PROVEEDOR=openai) eso no pasa: es la
 diferencia entre las dos formas de usar los modelos de OpenAI.
 """
@@ -70,7 +70,7 @@ class ModeloChatGPT(ChatOpenAI):
                 )
                 cuerpo["input"] = resto
 
-        # Va acá y no solo en el constructor porque es un requisito del
+        # Va aquí y no solo en el constructor porque es un requisito del
         # endpoint, no una preferencia nuestra: sin esto, 400.
         cuerpo["store"] = False
 
@@ -127,7 +127,7 @@ class ModeloChatGPT(ChatOpenAI):
 
         for cliente in (self.root_client, self.root_async_client):
             # El cliente de OpenAI arma el header de autenticación en cada
-            # pedido a partir de este atributo, así que cambiarlo alcanza.
+            # pedido a partir de este atributo, así que basta con cambiarlo.
             if cliente is not None and cliente.api_key != token:
                 cliente.api_key = token
 
@@ -151,7 +151,7 @@ def crear_modelo_chatgpt(modelo: str, token: str) -> ModeloChatGPT:
         use_responses_api=True,
         store=False,
         # Sin esto no informa el consumo de tokens cuando la respuesta llega
-        # en vivo, y como acá todo llega en vivo, quedaría siempre en 0.
+        # en vivo, y como aquí todo llega en vivo, quedaría siempre en 0.
         stream_usage=True,
         timeout=120,
         default_headers={

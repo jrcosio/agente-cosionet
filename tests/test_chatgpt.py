@@ -227,22 +227,22 @@ def test_sin_cache_de_codex_hay_una_version_de_respaldo(codex):
 
 def test_el_prompt_del_sistema_va_en_instructions():
     cuerpo = modelo_de_prueba()._get_request_payload(
-        [SystemMessage("Sos Facu."), HumanMessage("hola")]
+        [SystemMessage("Eres Javi."), HumanMessage("hola")]
     )
 
-    assert cuerpo["instructions"] == "Sos Facu."
+    assert cuerpo["instructions"] == "Eres Javi."
     # Y no queda ningún mensaje de sistema en la entrada: eso es un 400.
     assert all(m.get("role") != "system" for m in cuerpo["input"])
     assert [m["role"] for m in cuerpo["input"]] == ["user"]
 
 
 def test_el_prompt_en_bloques_tambien_se_mueve():
-    """El caché de Claude convierte el prompt en bloques. Acá igual entra."""
+    """El caché de Claude convierte el prompt en bloques. Aquí igual entra."""
     cuerpo = modelo_de_prueba()._get_request_payload(
-        [SystemMessage(content=[{"type": "text", "text": "Sos Facu."}])]
+        [SystemMessage(content=[{"type": "text", "text": "Eres Javi."}])]
     )
 
-    assert cuerpo["instructions"] == "Sos Facu."
+    assert cuerpo["instructions"] == "Eres Javi."
 
 
 def test_store_siempre_va_en_false():

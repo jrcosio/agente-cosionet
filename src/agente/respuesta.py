@@ -5,10 +5,10 @@ o Telegram no: un bloque de 800 caracteres se ve como un ladrillo y no
 parece escrito por una persona.
 
 Esta función parte el texto en mensajes cortos, respetando lo que el modelo
-quiso separar. No se usa en la plataforma de pruebas — está acá lista para
+quiso separar. No se usa en la plataforma de pruebas — está aquí lista para
 cuando el agente atienda mensajería.
 
-    partir_respuesta("Hola.\\n\\n¿Qué necesitás?")  →  ["Hola.", "¿Qué necesitás?"]
+    partir_respuesta("Hola.\\n\\n¿Qué necesitas?")  →  ["Hola.", "¿Qué necesitas?"]
 
 El criterio, en orden:
 
