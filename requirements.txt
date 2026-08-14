@@ -33,6 +33,13 @@ langchain-google-genai>=4.3,<5   # Gemini
 # con la biblioteca estándar. Lo único que hace falta afuera es haber
 # entrado con tu cuenta en la app de ChatGPT (o con: codex login).
 
+# --- Notas de voz ----------------------------------------------------------
+# La única dependencia que no se podía evitar: nada de lo que ya estaba sabe
+# pasar voz a texto, y la suscripción de ChatGPT tampoco (su endpoint contesta
+# "Audio input is not available"). No pide ninguna clave, funciona sin internet
+# y lee el OGG de Telegram sin ffmpeg. El modelo se descarga la primera vez.
+faster-whisper>=1.1,<2
+
 # --- Plataforma de pruebas (la web local) ----------------------------------
 fastapi>=0.115,<1
 uvicorn>=0.30,<1

@@ -24,7 +24,10 @@ permite enchufarlo a cualquier canal sin tocar una línea de aquí adentro.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import base64
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Iterator
 
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
@@ -32,7 +35,7 @@ from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from .config import Config
-from .herramientas import HERRAMIENTAS
+from .herramientas import AVISOS, HERRAMIENTAS
 from .memoria import crear_memoria
 from .modelos import crear_modelo
 from .prompts import leer_prompt
@@ -51,6 +54,53 @@ class Respuesta:
     # se guardaron en el caché para la próxima.
     tokens_cache_leidos: int = 0
     tokens_cache_guardados: int = 0
+    # Los archivos que generó una herramienta en este turno: hoy, las rutas de
+    # las imágenes de `crear_imagen`. Van aparte del texto porque el agente
+    # sigue devolviendo texto —la frontera del proyecto no se mueve— y esto es
+    # "además, mira estos archivos". Cada canal decide qué hacer con ellos: la
+    # web los sirve por HTTP, Telegram los sube, y la terminal los ignora.
+    imagenes: list[str] = field(default_factory=list)
+
+
+class Aviso(str):
+    """Un "estoy trabajando" en medio de la respuesta.
+
+    Sale por el mismo hilo que el texto, y ese es todo el truco: cuando el
+    modelo pide una herramienta que tarda medio minuto, el aviso tiene que
+    llegar **mientras** la herramienta trabaja, no después. Si fuera una
+    llamada aparte no serviría: quien recorre la transmisión está bloqueado
+    esperando el siguiente pedazo, y no volvería a mirar hasta que la
+    herramienta terminara.
+
+    **Es un `str` a propósito.** Así quien solo quiera texto —la terminal, un
+    `"".join(...)`— sigue funcionando sin enterarse, y quien quiera
+    distinguirlo pregunta `isinstance(pedazo, Aviso)`. La web lo manda como un
+    evento aparte y Telegram edita un mensaje con él; la terminal lo imprime
+    como una línea más, que es exactamente lo que quieres ver ahí.
+
+    No entra en `Respuesta.texto`: es andamiaje, no respuesta.
+
+    Lleva dos cosas más además del texto:
+
+      · `visible` — si es False, el aviso es **solo para la traza de la
+        terminal** y los canales no lo muestran. Sirve para contar cosas que a
+        quien está en Telegram le sobran (qué devolvió una herramienta) pero que
+        en el equipo son justo lo que hace falta ver para saber que no se ha
+        colgado.
+      · `detalle` — la letra pequeña para esa traza: los argumentos con los que
+        se llamó a la herramienta, por ejemplo.
+    """
+
+    visible: bool
+    detalle: str
+
+    def __new__(cls, texto: str, *, visible: bool = True, detalle: str = ""):
+        # Un str es inmutable, así que los datos de más se ponen en __new__ y
+        # no en __init__.
+        aviso = super().__new__(cls, texto)
+        aviso.visible = visible
+        aviso.detalle = detalle
+        return aviso
 
 
 class Transmision:
@@ -86,7 +136,11 @@ class Transmision:
             return
 
         for pedazo in self._pedazos:
-            self._partes.append(pedazo)
+            # Los avisos se dejan pasar pero no se guardan: no son parte de la
+            # respuesta, y si entraran aquí acabarían dentro de
+            # `resumen.texto` y en la memoria de la conversación.
+            if not isinstance(pedazo, Aviso):
+                self._partes.append(pedazo)
             yield pedazo
 
         self._terminada = True
@@ -190,42 +244,94 @@ class Agente:
 
     # -- Lo que usa todo el mundo --------------------------------------------
 
-    def responder(self, texto: str, conversacion: str = "local") -> Respuesta:
+    def responder(
+        self,
+        texto: str,
+        conversacion: str = "local",
+        imagenes: list[bytes] | None = None,
+    ) -> Respuesta:
         """Le mandas un mensaje, te devuelve la respuesta completa.
 
         `conversacion` es el thread_id de LangGraph: cada valor distinto es
         una conversación separada, con su propia memoria. En Telegram aquí va
         el chat_id de la persona.
+
+        En `imagenes` van fotos que manda la persona, en bytes: el modelo las
+        ve y puede hablar de ellas. Son bytes y no rutas porque no hay ningún
+        archivo — llegan de Telegram y van directas al modelo.
         """
         salida = self.grafo.invoke(
-            {"messages": [HumanMessage(texto)]},
+            {"messages": [_entrada(texto, imagenes)]},
             config=self._config_hilo(conversacion),
         )
-        return _a_respuesta(salida["messages"][-1], self.config.modelo)
+        mensajes = salida["messages"]
+
+        respuesta = _a_respuesta(mensajes[-1], self.config.modelo)
+        # Solo las de este turno, no las de toda la conversación: `messages`
+        # trae el historial completo y reenviar la imagen de hace media hora
+        # cada vez que alguien saluda no tiene ningún sentido. `_partir_en_turnos`
+        # ya sabe dónde empieza el turno de ahora.
+        respuesta.imagenes = _imagenes_de(_partir_en_turnos(mensajes)[-1])
+        return respuesta
 
     def responder_en_vivo(
-        self, texto: str, conversacion: str = "local"
+        self,
+        texto: str,
+        conversacion: str = "local",
+        imagenes: list[bytes] | None = None,
     ) -> Transmision:
         """Igual que responder(), pero el texto llega mientras se escribe.
 
         Devuelve una Transmision: la recorres con un for y al terminar tienes
         el resumen (tokens, modelo) en `.resumen`.
+
+        Por el camino puede colar algún `Aviso` ("estoy creando la imagen…").
+        Es un `str`, así que si no te interesa no tienes que hacer nada; y si
+        te interesa, `isinstance(pedazo, Aviso)` los distingue.
         """
         # Cada transmisión guarda su propio acumulado. Nada de estado en el
         # agente: puede haber muchas conversaciones respondiendo a la vez.
         acumulado: list = [None]
 
+        # Las que GENERAN las herramientas, que no son las que manda la persona.
+        # El nombre importa: cuando esta lista se llamaba `imagenes` tapaba al
+        # parámetro del mismo nombre, y las fotos que llegaban de Telegram se
+        # perdían sin ruido — el modelo contestaba "no veo ninguna imagen" y no
+        # había forma de saber por qué. Lo cuida
+        # `test_las_fotos_llegan_tambien_por_el_camino_en_vivo`.
+        generadas: list[str] = []
+
+        # Los pedidos de herramienta llegan partidos: hay que juntarlos.
+        seguidor = _SeguidorDeHerramientas()
+
         def pedazos() -> Iterator[str]:
             for pedazo, _ in self.grafo.stream(
-                {"messages": [HumanMessage(texto)]},
+                {"messages": [_entrada(texto, imagenes)]},
                 config=self._config_hilo(conversacion),
                 stream_mode="messages",
             ):
+                # Cuando el modelo pide una herramienta, avisamos ANTES de que
+                # se ejecute: es el único momento útil. Después de ejecutarla
+                # ya no hace falta decir que está trabajando.
+                yield from seguidor.mirar(pedazo)
                 # Por aquí también pasa lo que devuelven las herramientas, y eso
                 # no es la respuesta: es materia prima para que el modelo la
                 # escriba. Si lo dejáramos salir, la persona vería el listado
                 # crudo del clima en pantalla y después la respuesta de verdad.
+                #
+                # Pero antes de descartarlo hay que mirarlo: este `for` es el
+                # ÚNICO sitio por el que pasa el ToolMessage completo, con su
+                # `artifact`. Si la imagen no se recoge aquí, se pierde — y con
+                # ella la única forma que tiene la web de enterarse.
                 if isinstance(pedazo, ToolMessage):
+                    generadas.extend(_imagenes_de([pedazo]))
+                    # Lo que devolvió la herramienta, solo para la traza: en
+                    # Telegram esto sobra, pero en la terminal es la diferencia
+                    # entre "está trabajando" y "no sé qué está pasando".
+                    yield Aviso(
+                        f"{pedazo.name or 'herramienta'} → {_resumir(pedazo)}",
+                        visible=False,
+                    )
                     continue
 
                 # Los pedazos de LangChain se suman entre sí. Al sumarlos
@@ -244,10 +350,12 @@ class Agente:
                 if trozo:
                     yield trozo
 
-        return Transmision(
-            pedazos(),
-            lambda: _a_respuesta(acumulado[0], self.config.modelo),
-        )
+        def resumir() -> Respuesta:
+            resumen = _a_respuesta(acumulado[0], self.config.modelo)
+            resumen.imagenes = generadas
+            return resumen
+
+        return Transmision(pedazos(), resumir)
 
     # -- Utilidades -----------------------------------------------------------
 
@@ -334,6 +442,180 @@ def _partir_en_turnos(mensajes: list) -> list[list]:
             turnos[-1].append(mensaje)
 
     return turnos
+
+
+def _entrada(texto: str, imagenes: list[bytes] | None = None) -> HumanMessage:
+    """El mensaje de la persona, con sus fotos si mandó alguna.
+
+    Sin imágenes es un `HumanMessage` de toda la vida. Con imágenes, el
+    contenido pasa a ser una lista de bloques: el texto y una entrada por foto.
+
+    Se usa el formato estándar de LangChain (`{"type": "image",
+    "source_type": "base64", ...}`) y no el de OpenAI (`image_url`) porque los
+    dos funcionan pero solo el primero lo entienden también Claude y Gemini.
+    Cada adaptador lo traduce a lo que su proveedor espera.
+
+    Sobre el coste, que es lo que asusta y no debería: una foto de 3 MB en
+    base64 son ~1.500 tokens, no 800.000. Una imagen se tokeniza como imagen,
+    no como el texto de su base64 — que es justo lo contrario de lo que pasa
+    si el base64 va en un campo de texto (ver `herramientas.crear_imagen`).
+    Así que guardarla en la conversación sale barato y se puede seguir
+    preguntando por ella en los mensajes siguientes.
+    """
+    if not imagenes:
+        return HumanMessage(texto)
+
+    bloques: list[dict] = [{"type": "text", "text": texto}]
+
+    for foto in imagenes:
+        bloques.append(
+            {
+                "type": "image",
+                "source_type": "base64",
+                "mime_type": "image/jpeg",
+                "data": base64.b64encode(foto).decode("ascii"),
+            }
+        )
+
+    return HumanMessage(content=bloques)
+
+
+class _SeguidorDeHerramientas:
+    """Junta los pedidos de herramienta, que llegan partidos en trozos.
+
+    Y llegan de una forma que hay que ver para creer. Esto es lo que manda el
+    modelo cuando pide el clima de Bilbao, un trozo por línea:
+
+        {"name": "clima", "args": ""}      ← el nombre, sin argumentos
+        {"name": null,    "args": "{\""}    ← y ahora los argumentos, letra
+        {"name": null,    "args": "l"}         a letra, y ya sin el nombre
+        {"name": null,    "args": "ugar"}
+        {"name": null,    "args": "\":\""}
+        {"name": null,    "args": "Bil"}
+        {"name": null,    "args": "bao"}
+        {"name": null,    "args": "\"}"}
+
+    Así que para poder contar **con qué** se llamó a la herramienta hay que
+    juntar los trozos por el `index` del pedido, que es lo único que los ata.
+    Sin esto la traza dice "clima" a secas y no de dónde.
+
+    Y hay dos avisos por herramienta, en dos momentos distintos a propósito:
+
+      1. en cuanto se sabe el nombre, el aviso para la persona — cuanto antes,
+         que de eso se trata;
+      2. cuando los argumentos están completos, la línea para la traza. Llega
+         un instante después y justo antes de que la herramienta se ejecute.
+    """
+
+    def __init__(self) -> None:
+        self._nombres: dict[int, str] = {}
+        self._crudos: dict[int, str] = {}
+        self._avisados: set[int] = set()
+        self._detallados: set[int] = set()
+
+    def mirar(self, pedazo) -> list[Aviso]:
+        """Los avisos que toca soltar por este pedazo. Vacío casi siempre."""
+        avisos: list[Aviso] = []
+
+        for trozo in getattr(pedazo, "tool_call_chunks", None) or []:
+            if not isinstance(trozo, dict):
+                continue
+
+            indice = trozo.get("index") or 0
+            if trozo.get("name"):
+                self._nombres[indice] = trozo["name"]
+            self._crudos[indice] = self._crudos.get(indice, "") + (trozo.get("args") or "")
+
+            nombre = self._nombres.get(indice)
+            if not nombre:
+                continue
+
+            argumentos = _argumentos_legibles(self._crudos.get(indice, ""))
+
+            if indice not in self._avisados:
+                self._avisados.add(indice)
+                if argumentos:
+                    self._detallados.add(indice)
+                avisos.append(
+                    Aviso(
+                        AVISOS.get(nombre, f"Usando {nombre}…"),
+                        # Una herramienta sin aviso escrito igual se cuenta en la
+                        # traza: en el equipo se quiere ver todo.
+                        visible=nombre in AVISOS,
+                        detalle=f"{nombre}({argumentos})" if argumentos else nombre,
+                    )
+                )
+            elif argumentos and indice not in self._detallados:
+                self._detallados.add(indice)
+                avisos.append(Aviso(f"{nombre}({argumentos})", visible=False))
+
+        return avisos
+
+
+def _argumentos_legibles(crudo: str) -> str:
+    """Los argumentos de un pedido, si ya llegaron enteros.
+
+    Devuelve cadena vacía mientras el JSON esté a medias, que es la mayor parte
+    del tiempo: que parsee es justo la señal de que ya está completo.
+    """
+    if not crudo.strip():
+        return ""
+
+    try:
+        datos = json.loads(crudo)
+    except ValueError:
+        return ""
+
+    if not isinstance(datos, dict):
+        return _acortar(str(datos))
+
+    return _acortar(", ".join(f"{k}={v!r}" for k, v in datos.items()))
+
+
+def _acortar(texto: str, tope: int = 110) -> str:
+    """Corta dejando claro que cortó.
+
+    Sin los puntos, un argumento largo cortado a la mitad parece un valor
+    malformado y hace dudar de si el problema es el corte o la llamada.
+    """
+    return texto if len(texto) <= tope else texto[:tope] + "…"
+
+
+def _resumir(mensaje) -> str:
+    """Una línea con lo que devolvió una herramienta, para la traza."""
+    artefacto = getattr(mensaje, "artifact", None)
+    if isinstance(artefacto, dict) and artefacto.get("ruta"):
+        return Path(str(artefacto["ruta"])).name
+
+    texto = mensaje.content if isinstance(mensaje.content, str) else str(mensaje.content)
+    texto = " ".join(texto.split())
+    return texto[:90] + ("…" if len(texto) > 90 else "")
+
+
+def _imagenes_de(mensajes: list) -> list[str]:
+    """Las rutas de las imágenes que dejaron las herramientas en esos mensajes.
+
+    Una herramienta que genera un archivo lo anuncia en el `artifact` de su
+    `ToolMessage`, no en el `content` (el motivo está escrito en
+    `herramientas.crear_imagen`: el contenido va al modelo y se guarda en la
+    memoria, y un PNG ahí dentro cuesta cientos de miles de tokens por turno).
+
+    Aquí solo se leen esos artifacts. Que la ruta exista o no es cosa del
+    canal: si el archivo desapareció, quien lo envía se dará cuenta.
+    """
+    rutas = []
+
+    for mensaje in mensajes:
+        if not isinstance(mensaje, ToolMessage):
+            continue
+
+        artefacto = getattr(mensaje, "artifact", None)
+        if isinstance(artefacto, dict) and artefacto.get("tipo") == "imagen":
+            ruta = artefacto.get("ruta")
+            if ruta:
+                rutas.append(str(ruta))
+
+    return rutas
 
 
 def _sumar(acumulado, pedazo):

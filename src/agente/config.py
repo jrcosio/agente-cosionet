@@ -74,6 +74,15 @@ class Config:
     # de Telegram; el resto del proyecto ni lo mira.
     telegram_token: str = ""
 
+    # -- Las notas de voz (solo las mira el bot de Telegram) -----------------
+    # Qué modelo de Whisper transcribe. Cuanto más grande, mejor puntuación y
+    # más disco: `tiny` 75 MB, `base` 145 MB, `small` 480 MB. Se descarga solo
+    # la primera vez que le mandes un audio.
+    voz_modelo: str = "base"
+    # Vacío = que detecte el idioma solo. Poniendo "es" va algo más rápido y no
+    # se equivoca con audios de dos segundos, donde adivinar es una lotería.
+    voz_idioma: str = "es"
+
     @classmethod
     def desde_entorno(
         cls, proveedor: str | None = None, modelo: str | None = None
@@ -134,6 +143,8 @@ class Config:
             sqlite_ruta=os.getenv("SQLITE_RUTA", "datos/conversaciones.db"),
             postgres_dsn=(os.getenv("POSTGRES_DSN") or "").strip(),
             telegram_token=(os.getenv("TELEGRAM_TOKEN") or "").strip(),
+            voz_modelo=(os.getenv("VOZ_MODELO") or "base").strip(),
+            voz_idioma=(os.getenv("VOZ_IDIOMA") or "es").strip(),
         )
 
 

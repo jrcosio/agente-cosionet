@@ -12,9 +12,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from agente import herramientas  # noqa: E402
+from agente import herramientas, imagenes  # noqa: E402
 from agente.herramientas import HERRAMIENTAS, clima  # noqa: E402
 
 SEVILLA = {
@@ -121,3 +123,104 @@ def test_el_modelo_recibe_una_descripcion_util():
     assert clima.name == "clima"
     assert "clima" in clima.description.lower()
     assert "lugar" in clima.args
+
+
+# -- Crear imágenes -----------------------------------------------------------
+#
+# Se parchea `imagenes.generar`, que es la que sale a la red, igual que arriba
+# se parchean `_buscar_lugar` y `_pedir_el_clima`. Y `imagenes.CARPETA` se
+# manda a una carpeta temporal para no ensuciar datos/imagenes.
+
+PNG = (
+    b"\x89PNG\r\n\x1a\n" + b"esto no es un PNG de verdad, pero da igual: "
+    b"lo que se prueba es que los bytes llegan al disco tal cual"
+)
+
+
+@pytest.fixture
+def sin_generador(monkeypatch, tmp_path):
+    """La herramienta lista para usar, sin red y escribiendo en tmp_path."""
+    monkeypatch.setattr(imagenes, "CARPETA", tmp_path)
+    monkeypatch.setattr(imagenes, "generar", lambda descripcion: PNG)
+    return tmp_path
+
+
+def test_la_imagen_se_guarda_y_devuelve_la_ruta(sin_generador):
+    # Con un tool_call entero, invoke() devuelve el ToolMessage: es la única
+    # forma de ver el artifact, que es donde viaja la imagen.
+    mensaje = herramientas.crear_imagen.invoke(
+        {"args": {"descripcion": "un faro"}, "id": "2", "name": "crear_imagen",
+         "type": "tool_call"}
+    )
+
+    assert mensaje.artifact["tipo"] == "imagen"
+    ruta = Path(mensaje.artifact["ruta"])
+    assert ruta.is_file()
+    assert ruta.read_bytes() == PNG
+    assert ruta.parent == sin_generador
+
+
+def test_el_contenido_que_ve_el_modelo_no_lleva_la_imagen(sin_generador):
+    """**La regla que no se negocia.**
+
+    Si el PNG viajara en el `content`, iría al estado del grafo: se guardaría
+    en la memoria y se le reenviaría al modelo en cada mensaje siguiente. Un
+    megabyte de imagen son ~1,4 MB de base64, del orden de 350.000 tokens por
+    turno. Por eso va en el `artifact`, que el modelo no lee.
+    """
+    mensaje = herramientas.crear_imagen.invoke(
+        {"args": {"descripcion": "un faro"}, "id": "3", "name": "crear_imagen",
+         "type": "tool_call"}
+    )
+
+    assert len(mensaje.content) < 100, "el content es una frase, no una imagen"
+    assert "PNG" not in mensaje.content
+    assert "base64" not in mensaje.content
+
+
+def test_si_no_se_puede_generar_lo_dice_como_texto(monkeypatch, tmp_path):
+    """Una herramienta no levanta excepciones: devuelve el problema."""
+    monkeypatch.setattr(imagenes, "CARPETA", tmp_path)
+
+    def explota(descripcion):
+        raise RuntimeError("el generador dijo que no")
+
+    monkeypatch.setattr(imagenes, "generar", explota)
+
+    mensaje = herramientas.crear_imagen.invoke(
+        {"args": {"descripcion": "algo"}, "id": "4", "name": "crear_imagen",
+         "type": "tool_call"}
+    )
+
+    assert "No se pudo crear la imagen" in mensaje.content
+    assert "el generador dijo que no" in mensaje.content
+    assert mensaje.artifact == {}, "sin imagen no hay artefacto"
+
+
+def test_solo_se_guardan_las_ultimas(monkeypatch, tmp_path):
+    """El límite existe para que la carpeta no crezca sin fin."""
+    monkeypatch.setattr(imagenes, "CARPETA", tmp_path)
+    monkeypatch.setattr(imagenes, "MAXIMO", 3)
+
+    guardadas = []
+    for i in range(6):
+        # El nombre lleva la fecha, y aquí se guardan seis en el mismo
+        # segundo: los distingue el trozo al azar del final.
+        guardadas.append(imagenes.guardar(PNG + bytes([i])))
+
+    quedan = sorted(p.name for p in tmp_path.glob("*.png"))
+    assert len(quedan) == 3
+    # Las que quedan son las tres últimas, y ordenar por nombre es ordenar por
+    # antigüedad porque el nombre empieza por la fecha.
+    assert quedan == sorted(p.name for p in guardadas)[-3:]
+
+
+def test_la_herramienta_esta_atada_y_se_explica_sola():
+    nombres = [h.name for h in herramientas.HERRAMIENTAS]
+    assert "crear_imagen" in nombres
+
+    descripcion = herramientas.crear_imagen.description
+    # Lo que el modelo tiene que entender: que la imagen se envía sola. Sin
+    # esto se pone a describirla o a inventar un enlace.
+    assert "envía" in descripcion
+    assert "descripcion" in herramientas.crear_imagen.args

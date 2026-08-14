@@ -153,6 +153,7 @@
   .burbuja.md{white-space:normal}
   .burbuja.md > *:first-child{margin-top:0}
   .burbuja.md > *:last-child{margin-bottom:0}
+  .burbuja.md .cuerpo > *:last-child{margin-bottom:0}
   .burbuja.md p{margin:0 0 11px}
   .burbuja.md strong{color:#fff; font-weight:600}
   .burbuja.md em{font-style:italic}
@@ -182,6 +183,29 @@
     color:var(--tenue);
   }
   .burbuja.md hr{border:none; border-top:1px solid var(--borde); margin:14px 0}
+
+  /* ---------- El aviso de "estoy trabajando" ----------
+     Vive dentro de la burbuja mientras la herramienta trabaja y desaparece
+     cuando llega la respuesta. Es andamiaje, no contenido: de ahí el gris,
+     la cursiva y el punto que late. */
+  .paso{
+    display:flex; align-items:center; gap:8px;
+    font-size:13.5px; color:var(--tenue); font-style:italic; margin:2px 0;
+  }
+  .paso::before{
+    content:''; width:6px; height:6px; border-radius:50%;
+    background:var(--ambar); flex:none; animation:latir 1.2s ease-in-out infinite;
+  }
+
+  /* ---------- Imágenes generadas ----------
+     Sin el max-width la imagen se sale del ancho del mensaje: las que devuelve
+     el generador vienen a 1024-1536 px de ancho y el .msg mide 760. */
+  .imagen{display:block; margin:10px 0 2px; line-height:0}
+  .imagen img{
+    max-width:100%; height:auto; border-radius:10px;
+    border:1px solid var(--borde);
+  }
+  .imagen:hover img{border-color:var(--ambar)}
   .burbuja.md table{border-collapse:collapse; margin:0 0 11px; font-size:14px}
   .burbuja.md th,.burbuja.md td{border:1px solid var(--borde); padding:5px 10px}
   .burbuja.md th{background:var(--panel); font-weight:600; text-align:left}
@@ -744,19 +768,73 @@ async function enviar() {
         const d = JSON.parse(crudo);
 
         if (tipo === 'texto') {
+          // Ya hay respuesta: el aviso cumplió su función y estorba.
+          burbuja.querySelector('.paso')?.remove();
           acumulado += d.texto;
-          // Se vuelve a convertir el texto entero en cada pedazo, no solo el
-          // nuevo: el markdown necesita ver la marca completa. Con "**27,3" a
-          // medias todavía no hay negrita, y aparece sola cuando llegan los
-          // dos asteriscos que cierran.
           burbuja.className = 'burbuja md';
-          burbuja.innerHTML = markdown(acumulado);
-          burbuja.appendChild(cursor);
+
+          // El markdown se reescribe entero en cada pedazo, y por eso vive en
+          // su propio hueco: si se volcara sobre la burbuja se llevaría por
+          // delante las imágenes y los avisos que ya están puestos. Hoy las
+          // imágenes llegan después del texto y no se notaría, pero es una
+          // trampa esperando a que alguien cambie el orden.
+          let cuerpo = burbuja.querySelector('.cuerpo');
+          if (!cuerpo) {
+            cuerpo = document.createElement('div');
+            cuerpo.className = 'cuerpo';
+            burbuja.insertBefore(cuerpo, cursor);
+          }
+          // Se convierte el texto acumulado, no solo el trozo nuevo: el
+          // markdown necesita ver la marca completa. Con "**27,3" a medias
+          // todavía no hay negrita, y aparece sola cuando llegan los dos
+          // asteriscos que cierran.
+          cuerpo.innerHTML = markdown(acumulado);
+          abajo();
+        }
+
+        if (tipo === 'paso') {
+          // Solo uno a la vez: si llega otro aviso, sustituye al anterior en
+          // vez de apilarse. Y se queda dentro de la burbuja, así que cuando
+          // la respuesta empieza a escribirse se ve justo debajo.
+          let paso = burbuja.querySelector('.paso');
+          if (!paso) {
+            paso = document.createElement('div');
+            paso.className = 'paso';
+            burbuja.insertBefore(paso, cursor);
+          }
+          paso.textContent = d.texto;
+          abajo();
+        }
+
+        if (tipo === 'imagen') {
+          // Va envuelta en un enlace para poder verla entera: la del chat
+          // está encogida al ancho del mensaje.
+          const a = document.createElement('a');
+          a.className = 'imagen';
+          a.href = d.url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.title = 'Abrir a tamaño completo';
+
+          const img = document.createElement('img');
+          img.src = d.url;
+          img.alt = 'Imagen generada';
+          a.appendChild(img);
+
+          // Antes del cursor, que siempre va al final de la burbuja.
+          burbuja.insertBefore(a, cursor);
+          // La imagen tarda en cargar y hasta que no lo hace no ocupa alto,
+          // así que el scroll hay que bajarlo otra vez cuando ya se sabe
+          // cuánto mide.
+          img.onload = abajo;
           abajo();
         }
 
         if (tipo === 'fin') {
           cursor.remove();
+          // Puede quedar puesto si la respuesta no trajo texto (el modelo
+          // llamó a la herramienta y no dijo nada más).
+          burbuja.querySelector('.paso')?.remove();
           const meta = document.createElement('div');
           meta.className = 'meta';
           let html =

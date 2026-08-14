@@ -17,7 +17,7 @@ Y si ya pagas ChatGPT, **sin clave de API y sin tarjeta.**
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![uv](https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=uv&logoColor=white)
 <br>
-![Tests](https://img.shields.io/badge/tests-97%20passing-2EA043?style=for-the-badge)
+![Tests](https://img.shields.io/badge/tests-154%20passing-2EA043?style=for-the-badge)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-A31F34?style=for-the-badge)
 ![Idioma](https://img.shields.io/badge/código%20en-español-FFB300?style=for-the-badge)
 
@@ -50,7 +50,8 @@ Y si ya pagas ChatGPT, **sin clave de API y sin tarjeta.**
 | [Qué es](#que-es) | [Cómo funciona](#como-funciona) | [⚡ Arrancar](#arrancar) |
 | [🗂️ Qué hay adentro](#adentro) | [🎚️ Elegir el modelo](#modelo) | [🟢 **Con tu ChatGPT**](#chatgpt) |
 | [🎛️ La barra de ajustes](#ajustes) | [💾 La memoria](#memoria) | [🗄️ Test y producción](#modos) |
-| [⚡ El caché](#cache) | [🌦️ El clima](#clima) | [✈️ Telegram](#telegram) |
+| [⚡ El caché](#cache) | [🌦️ El clima](#clima) | [🎨 Las imágenes](#imagenes) |
+| [🎤 Háblale](#voz) | [⏳ Te va contando](#avisos) | [✈️ Telegram](#telegram) |
 | [🚢 En un servidor](#servidor) | [🎭 La personalidad](#personalidad) | [🧩 Desde tu código](#codigo) |
 | [📋 Las variables](#variables) | [❓ Dudas](#dudas) | |
 
@@ -87,10 +88,10 @@ botón, sin reiniciar y sin perder la charla.
 </td>
 <td width="33%" valign="top">
 
-**🌦️ Sabe el clima**
+**🎨 Crea imágenes**
 
-Pregúntale el tiempo de cualquier ciudad y sale a buscarlo. Sin clave, sin
-registro: es la primera herramienta.
+Pídele una imagen y la genera con tu suscripción, sin pagar aparte. La ves en
+el chat y en Telegram te llega como foto.
 
 </td>
 </tr>
@@ -107,15 +108,25 @@ Sin reiniciar nada.
 
 **✈️ Funciona en Telegram**
 
-El mismo agente en tu teléfono, sin pagar hosting: el bot corre en tu
-ordenador y atiende a todo el mundo.
+En tu teléfono y sin pagar hosting. Le mandas fotos y notas de voz, y las
+entiende.
 
 </td>
 <td width="33%" valign="top">
 
+**🌦️ Y sabe el tiempo**
+
+Pregúntale por cualquier ciudad y sale a buscarlo. Sin clave y sin registro:
+es la otra herramienta que trae.
+
+</td>
+</tr>
+<tr>
+<td colspan="3" valign="top">
+
 **📖 Escrito para leerse**
 
-Código y comentarios **en español**, y 97 tests que no gastan un solo token.
+Código y comentarios **en español**, y 154 tests que no gastan un solo token.
 Es material para aprender.
 
 </td>
@@ -265,7 +276,9 @@ agente-cosionet/
 │   └── sistema.md          ← la personalidad del agente (edítalo)
 ├── src/agente/
 │   ├── agente.py           ← EL AGENTE. El grafo de LangGraph.
-│   ├── herramientas.py     ← lo que sabe hacer además de hablar (el clima)
+│   ├── herramientas.py     ← lo que sabe hacer además de hablar
+│   ├── imagenes.py         ← genera imágenes y las guarda
+│   ├── voz.py              ← pasa las notas de voz a texto
 │   ├── modelos.py          ← Claude / OpenAI / Gemini / ChatGPT
 │   ├── sesion_chatgpt.py   ← la suscripción de ChatGPT (sin clave de API)
 │   ├── modelo_chatgpt.py   ← y las tres reglas raras de ese endpoint
@@ -278,7 +291,7 @@ agente-cosionet/
 │   │   └── telegram.py     ← EL BOT DE TELEGRAM
 │   └── web/
 │       └── app.py          ← la plataforma de pruebas
-├── tests/                  ← 97 tests que no gastan un solo token
+├── tests/                  ← 154 tests que no gastan un solo token
 ├── chat.py                 ← hablarle desde la terminal
 ├── servidor.py             ← levantar la web
 ├── bot_telegram.py         ← levantar el bot de Telegram
@@ -300,8 +313,8 @@ agente-cosionet/
 | `uv run pytest` | los tests |
 | `uv sync --group produccion` | agrega Postgres, para `MODO=produccion` |
 
-Uno de los 97 se salta si no tienes el grupo `produccion`: es el que prueba
-la conexión a Postgres. Con `uv sync --group produccion` corren los 97.
+Uno de los 154 se salta si no tienes el grupo `produccion`: es el que prueba
+la conexión a Postgres. Con `uv sync --group produccion` corren los 154.
 
 > [!NOTE]
 > **Si vas a leer un solo archivo, lee `src/agente/agente.py`.** Ahí está todo
@@ -693,6 +706,217 @@ problema al modelo y el modelo te lo explica.
 
 ---
 
+<a id="imagenes"></a>
+
+## 🎨 Crear imágenes
+
+Pídesela y te la manda:
+
+```
+créame una imagen de un faro en un acantilado al atardecer
+hazme un logo minimalista con una C azul
+dibuja un gato naranja durmiendo en un teclado, estilo fotográfico
+```
+
+**No pagas nada aparte**: las genera tu suscripción de ChatGPT, la misma que ya
+usa el agente para conversar. No hay ninguna clave nueva que sacar.
+
+| Dónde | Cómo llega |
+|---|---|
+| **La web** | Dentro del chat. Clic para abrirla a tamaño completo. |
+| **Telegram** | Dos mensajes: la foto para verla y el PNG sin comprimir para guardarlo. |
+
+### Y también las mira
+
+Mándale una foto **por Telegram** y la ve:
+
+```
+[foto de una planta]  ¿qué planta es esta?
+[foto de un ticket]   ¿cuánto he gastado?
+[foto sin más]        (te dice qué hay en ella)
+```
+
+Si la foto va con un pie, ese pie es la pregunta. Si va sola, te cuenta qué ve.
+
+**Y se acuerda de ella**: puedes seguir preguntando sin reenviarla —"¿de qué
+color es el cielo?"— porque la foto se queda en la memoria de la conversación.
+Cuesta unos 1.500 tokens, no los cientos de miles que parecería por su tamaño:
+una imagen se cuenta como imagen, no como el texto de su base64.
+
+> [!NOTE]
+> Lee **fotos**. Los audios, los documentos y los vídeos los deja pasar sin
+> romperse, pero todavía no sabe abrirlos. Y ve la foto para hablar de ella: no
+> la retoca.
+
+Tres cosas que conviene saber:
+
+- **Tarda entre 20 y 30 segundos.** Es lo que tarda, no es que se haya colgado.
+  En Telegram verás "subiendo una foto" mientras trabaja.
+- **La forma la decide la descripción, no un ajuste.** Si quieres un cartel
+  vertical, dilo con palabras ("un cartel vertical"): una escena sale apaisada
+  y un logo sale cuadrado. No hay parámetro de tamaño porque el generador lo
+  ignora — probado.
+- **Se guardan las últimas 50** en `datos/imagenes/`, y las más viejas se
+  borran solas. Esa carpeta ya está en `.gitignore`: no se sube nunca.
+
+> [!NOTE]
+> Funciona **con cualquier modelo**, no solo con ChatGPT. Si estás conversando
+> con Claude o con Gemini, ellos deciden llamar a la herramienta igual y la
+> imagen la genera tu suscripción por detrás.
+>
+> Lo único que hace falta es **haber entrado con tu cuenta**, y eso tiene una
+> consecuencia: como toda la funcionalidad va con la sesión de ChatGPT, que
+> vive en tu `~/.codex`, **las imágenes son cosa de tu ordenador**. El bot
+> desplegado en un servidor no puede generarlas — el mismo límite que
+> [`PROVEEDOR=chatgpt`](#chatgpt).
+
+<details>
+<summary><b>Por qué la imagen no viaja dentro de la conversación</b></summary>
+
+<br>
+
+Es la decisión de diseño de toda la funcionalidad, y está medida.
+
+Una herramienta le devuelve al modelo un texto que **entra en la memoria de la
+conversación** y se le reenvía en cada mensaje siguiente. Si la imagen viajara
+ahí, un PNG de 1 MB son ~1,4 MB en base64: del orden de **350.000 tokens por
+turno**, más que la ventana de contexto de cualquier modelo. Y encima se
+guardaría en la base de datos, reescrita entera en cada paso.
+
+Así que el binario se queda en disco y por la conversación solo viaja la ruta.
+El modelo recibe una frase de 37 caracteres —"Imagen creada y enviada a la
+persona."— y cada canal se ocupa de hacerla llegar.
+
+Se ve en los números: pedir una imagen gastó **698 tokens de entrada**. Si el
+base64 hubiera entrado, serían cientos de miles.
+
+</details>
+
+<br>
+
+---
+
+<a id="voz"></a>
+
+## 🎤 Háblale en vez de escribir
+
+Mándale una **nota de voz por Telegram** y la entiende. La transcripción pasa a
+ser tu mensaje, así que funciona con todo lo demás: puedes pedirle el tiempo
+hablando, o pedirle una imagen hablando.
+
+Probado con una nota de voz de verdad: *«dime qué tiempo hace en Bilbao»* →
+transcrita en 0,8 s → llamó a la herramienta del clima → *«En Bilbao está
+nublado, con 24,8 °C»*.
+
+**Transcribe en tu ordenador: sin clave, sin coste y sin internet.** Y no es
+por gusto — es que la suscripción de ChatGPT **no puede** con el audio: su
+endpoint contesta *"Audio input is not available"*. Así que aquí no valía el
+camino de las imágenes y se usa [Whisper](https://github.com/SYSTRAN/faster-whisper)
+en local.
+
+| | |
+|---|---|
+| **Primera nota de voz** | Descarga el modelo (145 MB) y tarda unos 10 s |
+| **De ahí en adelante** | Medio segundo por nota |
+| **Dónde se guarda** | `~/.cache/huggingface`, fuera del proyecto |
+
+Puedes cambiar el modelo en el `.env` si quieres más precisión o menos disco:
+
+```bash
+VOZ_MODELO=base     # tiny (75 MB) · base (145 MB) · small (480 MB)
+VOZ_IDIOMA=es       # vacío = que lo detecte solo
+```
+
+Mientras transcribe te enseña lo que ha entendido, así que si se equivoca lo
+ves y no te quedas con la duda de por qué contestó algo raro.
+
+> [!NOTE]
+> Es la **única dependencia** que suma el proyecto, y se añadió porque nada de
+> lo que ya había sabe pasar voz a texto. Te entiende hablando, pero contesta
+> escribiendo: no manda notas de voz.
+
+<br>
+
+---
+
+<a id="avisos"></a>
+
+## ⏳ Te va contando lo que hace
+
+Crear una imagen tarda medio minuto. Medio minuto sin decir nada es
+indistinguible de un programa colgado, así que el agente avisa **mientras
+trabaja**, no cuando ya acabó:
+
+| Dónde | Qué ves |
+|---|---|
+| **La web** | Una línea en gris con un punto que late, dentro de la burbuja: *🎨 Creando la imagen…* Desaparece en cuanto empieza a escribir la respuesta. |
+| **Telegram** | Un mensaje que se va editando y **se borra solo** al terminar, más el "subiendo una foto" de Telegram. El chat no se queda con el rastro. |
+| **La terminal** | Una traza completa, con la hora en cada línea. |
+
+Avisa de **todas** las herramientas, no solo de las lentas: también verás
+*🌦️ Consultando el tiempo…*. Si añades una herramienta nueva, le pones su
+aviso en una línea (`AVISOS`, en `herramientas.py`) y ya está.
+
+### En el equipo se ve todo
+
+El bot de Telegram deja una traza de cada mensaje, para que nunca tengas que
+adivinar si está funcionando o colgado:
+
+```
+23:47:19 ┌ [12212910] 🎤 nota de voz: (sin texto)
+23:47:20 │ audio bajado: 17 KB
+23:47:20 │ 🎤 transcrito en 0.9s (whisper base): «Dime qué tiempo hace en Bilbao.»
+23:47:20 │ al modelo (chatgpt · gpt-5.6-terra)
+23:47:22 │ 🔧 clima
+23:47:23 │ clima(lugar='Bilbao, España')
+23:47:23 │ clima → Clima en Bilbao, País Vasco, España: - Temperatura: 24.2 °C…
+23:47:25 │ ✉️ 1 mensaje(s): En Bilbao hace 24,2 °C, con cielo nublado…
+23:47:25 └ listo en 6.0s · ↑630 ↓37 tokens
+```
+
+**La hora en cada línea es lo que hace útil la traza**: se ve de un golpe
+*dónde* se está tardando — bajar el audio, transcribir, el modelo, o la
+herramienta. Y los mensajes que **no** se contestan también salen, con el
+motivo, en vez de desaparecer en silencio.
+
+Al arrancar te dice qué sabe hacer **ese** proceso:
+
+```
+Bot escuchando - @tu_bot
+   chatgpt - gpt-5.6-terra - memoria SQLite
+   Sabe: texto, fotos que le mandes, notas de voz (whisper base), clima, crear_imagen
+```
+
+> [!TIP]
+> Esa línea vale más de lo que parece. Si le mandas una nota de voz y ahí no
+> pone "notas de voz", el proceso que está corriendo es viejo: reinícialo y
+> deja de buscar el fallo en otro sitio.
+
+<details>
+<summary><b>Por qué esto era más difícil de lo que parece</b></summary>
+
+<br>
+
+El aviso tiene que llegar **mientras** la herramienta trabaja, y ahí está el
+problema: quien está leyendo la respuesta —la web, el bot— se queda bloqueado
+esperando el siguiente trozo de texto, y no vuelve a mirar nada hasta que
+llegue. Un aviso por otra vía se emitiría a tiempo pero no podría entregarse
+hasta 30 segundos después, que es justo cuando ya no sirve.
+
+Así que el aviso viaja **por el mismo hilo que el texto**, mezclado con él. Es
+un `Aviso`, que es una subclase de `str`: quien no lo distingue lo trata como
+texto y no se entera de nada; quien quiere, pregunta `isinstance(pedazo, Aviso)`
+y lo pinta a su manera. Y no entra en la respuesta final.
+
+Medido contra un servidor de verdad: el aviso a los **3 s**, el texto a los
+**31 s**.
+
+</details>
+
+<br>
+
+---
+
 <a id="telegram"></a>
 
 ## ✈️ Ponerlo en Telegram
@@ -949,6 +1173,8 @@ HERRAMIENTAS = [clima]
 | `MEMORIA_MENSAJES` | `20` | Cuántos mensajes recuerda |
 | `PROMPT_SISTEMA` | `prompts/sistema.md` | Qué archivo usar de personalidad |
 | `TELEGRAM_TOKEN` | — | El token de @BotFather, para `bot_telegram.py` |
+| `VOZ_MODELO` | `base` | Qué Whisper transcribe: `tiny`, `base`, `small`… |
+| `VOZ_IDIOMA` | `es` | El idioma del audio; vacío para detectarlo solo |
 
 <br>
 

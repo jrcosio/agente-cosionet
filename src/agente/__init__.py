@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .agente import Agente, Respuesta, Transmision
+from .agente import Agente, Aviso, Respuesta, Transmision
 from .canales import Canal, MensajeEntrante
 from .config import Config, ErrorDeConfiguracion, proveedores_disponibles
 from .modelos import crear_modelo
@@ -12,6 +12,7 @@ __version__ = "1.0.0"
 
 __all__ = [
     "Agente",
+    "Aviso",
     "Canal",
     "Config",
     "ErrorDeConfiguracion",

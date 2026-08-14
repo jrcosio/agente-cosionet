@@ -46,8 +46,10 @@ Lo que importa aquí es qué hace cada uno:
 | Archivo | Qué resuelve |
 |---|---|
 | `agente.py` | **El agente.** El grafo de LangGraph. Empieza por aquí. |
-| `herramientas.py` | Lo que el agente puede hacer además de conversar. Hoy: el clima. |
+| `herramientas.py` | Lo que el agente puede hacer además de conversar: el clima y crear imágenes |
+| `imagenes.py` | Genera las imágenes con tu suscripción y las guarda en `datos/imagenes/` |
 | `modelos.py` | Crea el modelo y le pregunta al proveedor cuáles tiene |
+| `voz.py` | Pasa una nota de voz a texto, con Whisper en tu ordenador |
 | `sesion_chatgpt.py` | **La suscripción de ChatGPT**: la credencial sale de la sesión de Codex, no del `.env` |
 | `modelo_chatgpt.py` | El `ChatOpenAI` apuntado a esa suscripción, con las tres reglas raras del endpoint |
 | `memoria.py` | Los checkpointers: `ram` / `sqlite` / `postgres` |
@@ -97,10 +99,12 @@ entrar con la cuenta. Se lee en `sesion_chatgpt.py` y entra al programa por
 | Quieres… | Archivo | Cómo |
 |---|---|---|
 | Agregar un proveedor nuevo | `modelos.py` | Una rama en `crear_modelo()` + una en `listar_modelos()`, y sumarlo a `PROVEEDORES_VALIDOS` en `config.py` |
+| Avisar de que una herramienta trabaja | `herramientas.py` | Una línea en `AVISOS`. Si no la pones, esa herramienta no avisa y no se rompe nada |
 | Que la web muestre bien el proveedor nuevo | `web/static/index.html` | Un nombre en `NOMBRES` (y en `FALTA`, si lo que le falta no es una clave del `.env`) |
 | Cambiar dónde se guardan las charlas | `.env` (`MODO`) | O una función nueva en `memoria.py` |
 | Cambiar la personalidad | `prompts/sistema.md` | Es texto plano |
 | **Agregar herramientas** | `herramientas.py` | Una función con `@tool` + sumarla a `HERRAMIENTAS`. El grafo ya está armado. |
+| Que una herramienta devuelva un **archivo** | `herramientas.py` | `@tool(response_format="content_and_artifact")` y devolver una tupla. Mira `crear_imagen`: el binario **nunca** va en el `content` |
 | Agregar un canal | archivo nuevo en `canales/` | Traducir mensaje entrante → `agente.responder(texto, conversacion=<chat_id>)` |
 | Nueva variable de configuración | `config.py` | Campo en `Config` + lectura en `desde_entorno()` + línea en `.env.example` |
 | **Agregar una dependencia** | `pyproject.toml` | Y también en el `requirements*.txt` que corresponda, y después `uv lock`. Si te olvidas de alguno de los tres, falla `tests/test_dependencias.py` |
@@ -167,9 +171,9 @@ uv sync --group produccion
 Los tests van con `uv run pytest`, sin instalar nada antes: `pytest` está en el
 grupo `dev`, y ese grupo uv lo incluye por defecto.
 
-`uv run pytest` da **96 pasados y 1 salteado**: el salteado es
+`uv run pytest` da **153 pasados y 1 salteado**: el salteado es
 `test_la_conexion_de_postgres_no_se_la_lleva_el_recolector`, que necesita el
-grupo `produccion`. Con `uv sync --group produccion` pasan los 97. Si agregas
+grupo `produccion`. Con `uv sync --group produccion` pasan los 154. Si agregas
 un test que dependa de una dependencia opcional, va con `importorskip` como
 ese: la falta de un paquete que no se instala solo no es un test roto.
 
@@ -296,6 +300,108 @@ Cosas que parecen bugs y no lo son, o que cuestan de encontrar:
   listo sin que nadie pegue una clave, así que es el que corresponde de
   arranque. El orden de `PROVEEDORES_VALIDOS` también cambió por eso: es el
   orden de los botones en la web.
+- **Los avisos de progreso salen por el MISMO hilo que el texto, y eso no es
+  un capricho.** `crear_imagen` tarda medio minuto, y medio minuto callado es
+  indistinguible de un programa colgado. El aviso tiene que llegar *mientras*
+  la herramienta trabaja, y la única forma es que lo emita el mismo generador:
+  quien recorre la transmisión está bloqueado esperando el siguiente pedazo y
+  no vuelve a mirar nada hasta que llegue. Un callback aparte no serviría —se
+  llamaría a tiempo, pero la web no podría emitirlo hasta desbloquearse, o sea
+  30 segundos tarde. Medido contra un servidor de verdad: el aviso llega a los
+  3 s y el texto a los 31 s. (Ojo con medirlo con el `TestClient` de FastAPI:
+  ese almacena el stream y todo parece llegar junto al final. Ahí me comí una
+  media hora buscando un bug que no existía.)
+- **`Aviso` es una subclase de `str` a propósito.** Así quien solo quiera texto
+  —la terminal, un `"".join(...)`, los tests de siempre— sigue funcionando sin
+  enterarse, y quien quiera distinguirlo hace `isinstance(pedazo, Aviso)`. No
+  entra en `Respuesta.texto`: lo filtra `Transmision.__iter__`, y si entrara
+  acabaría guardado en la memoria de la conversación como si fuera respuesta.
+- **`deberia_responder()` descartaba TODAS las notas de voz.** Su primera
+  condición era `if not mensaje.texto.strip(): return False`, escrita cuando
+  "sin texto" quería decir "no sabemos qué hacer con esto". Una nota de voz no
+  trae texto —el texto sale de transcribirla, después y en otro sitio—, así que
+  se caía ahí sin llegar nunca a Whisper. Y desde fuera era **idéntico** a que
+  el bot estuviera roto: mandabas un audio y no pasaba nada. Las fotos se
+  salvaban de casualidad porque `_traducir()` les pone un texto por defecto.
+  Ahora la condición mira las tres cosas (texto, adjuntos y voz) y lo cuidan
+  tres tests. **Si añades otra clase de mensaje, acuérdate de este guardián.**
+- **Los pedidos de herramienta llegan partidos de una forma que hay que ver.**
+  El primer trozo trae el nombre y los argumentos vacíos; los siguientes traen
+  los argumentos letra a letra **y ya sin el nombre**. Lo único que los ata es
+  el `index`. De ahí `_SeguidorDeHerramientas`: sin juntarlos, la traza dice
+  "clima" a secas y nunca de dónde. Y de ahí también que haya dos avisos por
+  herramienta: el de la persona en cuanto se sabe el nombre (cuanto antes) y el
+  de la traza cuando los argumentos ya parsean.
+- **La traza del bot no es decoración.** Un bot que tarda treinta segundos es
+  indistinguible de un bot colgado si no cuenta nada, y ese fue literalmente el
+  problema que destapó el bug de arriba: en cuanto la traza dijo "ignorado", el
+  fallo apareció en un minuto. Cada línea lleva la hora, así que se ve **dónde**
+  se tarda: bajar el audio, transcribir, el modelo o la herramienta.
+- **El banner de arranque dice qué sabe hacer ESTE proceso**, no lo que sabe
+  hacer el repo. Es la línea más útil del arranque: si le mandas una nota de voz
+  y en el banner no pone "notas de voz", el proceso es viejo y no hay que buscar
+  el fallo en otro lado. Pasó dos veces antes de que existiera.
+- **La suscripción NO puede con el audio, y está comprobado.** El endpoint
+  contesta `400 "Audio input is not available."` a un bloque `input_audio`,
+  rechaza el MIME de audio en `input_file`, y `/audio/transcriptions` da 403.
+  Los modelos lo declaran: `input_modalities: ["text", "image"]`, sin audio.
+  Por eso `voz.py` transcribe en local con faster-whisper y **es la única
+  dependencia del proyecto que no se podía evitar** — nada de lo que ya estaba
+  sabe convertir voz en texto. Si algún día la suscripción lo soporta, se
+  cambia el cuerpo de `voz.transcribir()` y nada más.
+- **El audio se transcribe en el CANAL, no en el agente**, y es a propósito: el
+  modelo no oye, así que una nota de voz solo sirve convertida en texto — y
+  convertida, ya es un mensaje normal. Así la frontera del agente no se mueve
+  (sigue recibiendo texto), y en la memoria queda **lo que dijiste**, no un
+  audio que nadie podría volver a leer. Es la diferencia con las fotos, que sí
+  van al modelo tal cual.
+- **El modelo de Whisper se carga una vez y se queda.** Cargarlo tarda 6-9
+  segundos (la primera vez además lo descarga), y transcribir después son 0,5.
+  Si se cargara por audio, cada nota costaría diez segundos de más. Lo cuida
+  `test_el_modelo_se_carga_una_sola_vez`.
+- **faster-whisper lee el OGG/Opus de Telegram directamente**, sin ffmpeg ni
+  nada instalado aparte. Era el riesgo grande de esta funcionalidad y no
+  existe: probado con una nota de voz real (17 KB, transcrita en 0,8 s).
+- **`_subir()` saca el Content-Type de la extensión.** Estaba clavado a
+  `image/png` de cuando solo se subían imágenes; con audios eso es mentirle a
+  Telegram, y eso funciona hasta que deja de funcionar.
+- **En `responder_en_vivo()` hay dos listas de imágenes y NO se pueden llamar
+  igual.** El parámetro `imagenes` son las fotos que manda la persona; la lista
+  local `generadas` son las que crean las herramientas. Cuando la segunda se
+  llamaba también `imagenes`, tapaba al parámetro: las fotos de Telegram se
+  perdían **sin ruido** —el modelo contestaba "no veo ninguna imagen adjunta"—
+  y encima solo pasaba por ese camino, porque `responder()` no tiene la lista
+  local y funcionaba bien. Los tests de entonces no lo vieron porque probaban
+  `responder()` **con** fotos y `responder_en_vivo()` **sin** ellas, que es
+  justo la combinación que no cubre nada: el bot usa la que faltaba. Ahora lo
+  cuidan `test_las_fotos_llegan_tambien_por_el_camino_en_vivo` y
+  `test_las_fotos_que_entran_y_las_que_salen_no_se_pisan`.
+- **LangChain normaliza el bloque de la imagen antes de dárselo al modelo.** Lo
+  que se escribe en `_entrada()` es `{"source_type": "base64", "data": ...}` y
+  lo que llega al modelo es `{"base64": ...}`. Los dos son válidos y en el
+  estado se guarda el primero; si escribes un test que mire el bloque, fíjate
+  cuál de los dos estás mirando.
+- **Una imagen que ENTRA cuesta ~1.500 tokens, no 800.000.** Es lo contrario de
+  lo que pasa con una que sale, y confunde: una foto de 3 MB en base64 dentro de
+  un bloque `{"type": "image"}` se tokeniza **como imagen**; ese mismo base64
+  dentro de un campo de texto se tokeniza como texto y son cientos de miles.
+  Medido: 2.350 tokens de entrada con la foto, 2.390 en el turno siguiente sin
+  reenviarla. Por eso guardarla en la conversación sale barato y se puede seguir
+  preguntando por ella.
+- **Pero en disco sí pesa.** Esos 3 MB de base64 viven en el `HumanMessage`, y
+  el estado se serializa entero en cada superstep del grafo: una foto recibida
+  engorda `conversaciones.db` unos cuantos megas. `_recortar()` no lo limpia
+  (solo filtra lo que va al modelo); lo borra `olvidar()`. Si algún día molesta,
+  la salida es encoger la foto antes de guardarla, no dejar de guardarla.
+- **El formato de imagen que se manda es el estándar de LangChain**
+  (`{"type": "image", "source_type": "base64", ...}`), no el de OpenAI
+  (`image_url`). Los dos funcionan con el proveedor `chatgpt` —lo comprobé— pero
+  solo el primero lo entienden también Claude y Gemini. Está en `_entrada()`.
+- **Bajar una foto de Telegram son dos pasos y dos dominios.** `getFile` cambia
+  el `file_id` por una ruta temporal, y esa ruta se descarga de
+  `/file/bot<token>/...` — no de `/bot<token>/...`, que es la API. `descargar()`
+  devuelve None en vez de levantar: una foto que no baja no puede dejar sin
+  respuesta a la persona.
 - **La respuesta se convierte de markdown en el navegador, y entera en cada
   pedazo.** El modelo contesta con `**negritas**`, listas y bloques de código,
   así que `index.html` trae un intérprete de markdown escrito a mano (no hay
@@ -312,12 +418,39 @@ Cosas que parecen bugs y no lo son, o que cuestan de encontrar:
   · el código se aparta detrás de un marcador **entre NUL** antes de convertir
   el resto. El carácter importa: con un separador cualquiera como `" 3 "`, un
   texto como "hay 3 modelos" se toma por un hueco y desaparece.
+  Y el markdown se pinta en un `div.cuerpo` propio dentro de la burbuja, no
+  sobre la burbuja: reescribirlo entero en cada trozo se llevaría por delante
+  las imágenes y el aviso que ya están puestos ahí.
   Y `_asi_` **no** es cursiva a propósito: en este proyecto el guion bajo está
   en todos los nombres reales (`MODELO_CHATGPT`, `thread_id`).
 - **Los proveedores sin credencial no se muestran en la barra.** Antes salían
   en gris y desactivados; ahora `pintarProveedores()` los saltea. Si no hay
   ninguno listo la barra queda vacía y el que explica qué hacer es el aviso
   amarillo de abajo, no los botones.
+- **Al generador de imágenes no se le puede pedir el tamaño.** Se le mandan
+  `size` y `quality` y los acepta sin quejarse: y los ignora. Probado con
+  1024x1024, 1024x1536 y `quality: medium` — las tres veces devolvió lo mismo
+  que sin pedir nada. Lo que decide la forma es **la descripción**: una escena
+  sale apaisada y un logo sale cuadrado. Por eso `crear_imagen` no tiene
+  parámetro de orientación: se pide con palabras, dentro de la descripción.
+- **Generar una imagen tarda 20-30 segundos.** De ahí que `imagenes.py` tenga
+  su propia espera de 180 s: con la de una petición normal no llega ninguna. Y
+  de ahí también el `upload_photo` en Telegram — medio minuto de
+  "escribiendo..." sin nada detrás preocupa más que tranquiliza.
+- **La imagen la pide un modelo, no la pedimos nosotros.** `imagenes.generar()`
+  le habla al mismo endpoint de la suscripción con la herramienta integrada
+  `image_generation`, y usa `gpt-5.6-luna` a propósito: ese modelo no dibuja
+  nada —la imagen la hace el backend— solo tiene que decidir llamar a la
+  herramienta, y para eso el más barato sirve igual. Da lo mismo con qué modelo
+  estés conversando.
+- **Solo se recogen las imágenes del turno de ahora.** `messages` trae el
+  historial completo, así que leerlas todas haría que cada "hola" reenviara la
+  imagen de hace media hora. `responder()` mira el último turno de
+  `_partir_en_turnos()`; lo cuida `test_solo_las_imagenes_del_turno_de_ahora`.
+- **`responder_en_vivo()` es el único sitio donde pasa el `ToolMessage` entero.**
+  Ese `continue` que descarta los resultados de herramienta es también la única
+  oportunidad de ver el `artifact`: si la imagen no se recoge ahí, la web no se
+  entera de que existe.
 - **La lista de modelos de OpenAI trae todo junto** (imágenes, audio,
   embeddings) y hay que filtrarla; la de Anthropic ya viene limpia y ordenada.
 - **El listado de la suscripción pide la versión del cliente** y devuelve
@@ -351,7 +484,10 @@ Cosas que parecen bugs y no lo son, o que cuestan de encontrar:
 
 No lo agregues salvo que te lo pidan: son los próximos videos de la serie.
 
-- Más herramientas (hay una sola: el clima)
+- Más herramientas (hay dos: el clima y crear imágenes)
+- Contestar con voz (te entiende hablando, pero responde escribiendo)
+- Leer documentos o vídeo (las fotos las ve y las notas de voz las oye)
+- Editar una imagen que le mandes (la ve y habla de ella, pero no la retoca)
 - RAG / base de conocimiento
 - Autenticación en la plataforma de pruebas (es local, un solo usuario)
 - Varias conversaciones en paralelo en la web (usa un `thread_id` fijo)
@@ -385,7 +521,30 @@ Tres cosas que importan:
   `clima()`.
 - **Sin claves nuevas.** `clima` usa Open-Meteo justamente porque no pide
   registro ni tarjeta: arrancar el repo no tiene que depender de sacar una
-  credencial más.
+  credencial más. `crear_imagen` cumple lo mismo por otro camino: usa la
+  sesión de ChatGPT que ya está ahí.
+
+**Y si la herramienta produce un archivo** (una imagen, un audio, un PDF), hay
+una regla más y es la que más cara sale si se salta:
+
+```python
+@tool(response_format="content_and_artifact")
+def crear_imagen(descripcion: str) -> tuple[str, dict]:
+    ...
+    return ("Imagen creada y enviada.", {"tipo": "imagen", "ruta": str(ruta)})
+#           └─ esto lo lee el modelo      └─ esto no lo lee: es para el canal
+```
+
+Lo primero va al **estado del grafo**: se guarda en la memoria y se le reenvía
+al modelo en cada mensaje siguiente. Lo segundo (`artifact`) se queda en el
+mensaje. Un PNG de 1 MB son ~1,4 MB de base64, del orden de **350.000 tokens
+por turno**, y `_recortar()` no protege porque cuenta mensajes, no bytes. Así
+que: **el binario se queda en disco y por el estado solo viaja la ruta.** El
+test que lo vigila es `test_el_estado_no_se_llena_de_base64`, y falla de verdad
+si alguien lo mueve (comprobado moviéndolo).
+
+De ahí, la ruta llega a `Respuesta.imagenes` y cada canal decide: la web la
+sirve por `/api/imagen/...`, Telegram la sube, la terminal la ignora.
 
 > ✅ **La trampa que estaba aquí ya está resuelta**, pero conviene entenderla
 > antes de tocar `_armar_entrada()`. Una vuelta de herramienta son tres

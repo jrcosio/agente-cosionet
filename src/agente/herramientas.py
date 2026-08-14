@@ -6,15 +6,17 @@ y LangGraph la corre y le devuelve el resultado. Por eso el **docstring importa
 tanto como el código**: es literalmente lo único que el modelo lee para decidir
 si esta herramienta le sirve y qué mandarle.
 
-Aquí hay una sola: el clima.
+Aquí hay dos: el clima y crear imágenes. La de imágenes es la primera que
+devuelve algo que no es texto, y cómo lo hace está explicado en su propio
+comentario: importa, porque marca el camino para el audio y lo que venga.
 
-Usa **Open-Meteo** (https://open-meteo.com), que es gratis, no pide registro y
-no usa clave de API. Eso es a propósito: este repo es para probar y no queremos
-que arrancarlo dependa de sacar una credencial más. El uso no comercial no
-tiene costo ni tarjeta.
+Ninguna de las dos pide una credencial nueva, que es la regla del proyecto: el
+clima usa **Open-Meteo** (https://open-meteo.com), gratis y sin registro, y las
+imágenes van con tu suscripción de ChatGPT, la misma que ya usa el agente para
+conversar (ver `imagenes.py`).
 
-Son dos consultas encadenadas, porque la API del clima habla en coordenadas y
-las personas hablan en nombres de ciudades:
+El clima son dos consultas encadenadas, porque la API del tiempo habla en
+coordenadas y las personas hablan en nombres de ciudades:
 
     1. Geocoding  → "Sevilla"       se convierte en  (37.39, -5.98)
     2. Pronóstico → (37.39, -5.98)  se convierte en  19 °C y nublado
@@ -30,6 +32,8 @@ import urllib.parse
 import urllib.request
 
 from langchain_core.tools import tool
+
+from . import imagenes
 
 GEOCODING = "https://geocoding-api.open-meteo.com/v1/search"
 PRONOSTICO = "https://api.open-meteo.com/v1/forecast"
@@ -112,9 +116,82 @@ def clima(lugar: str) -> str:
     return _redactar(encontrado, datos)
 
 
+@tool(response_format="content_and_artifact")
+def crear_imagen(descripcion: str) -> tuple[str, dict]:
+    """Crea una imagen a partir de una descripción y se la envía a la persona.
+
+    Úsala cuando te pidan crear, generar, dibujar o diseñar una imagen, un
+    dibujo, un logo, un cartel o una ilustración.
+
+    **La imagen se le envía sola a la persona en cuanto termina esta
+    herramienta.** No hace falta que la describas, ni que pongas un enlace, ni
+    que expliques cómo verla: ya la está viendo. Con una frase corta diciendo
+    qué hiciste es suficiente.
+
+    Tarda entre 20 y 30 segundos, así que no la uses para cosas que se pueden
+    contestar con texto.
+
+    Args:
+        descripcion: Qué tiene que salir en la imagen, con todo el detalle que
+            te hayan dado: el asunto, el estilo ("fotográfico", "acuarela",
+            "plano"), los colores y el texto que tenga que aparecer. **La
+            orientación va aquí también, con palabras** ("un cartel vertical",
+            "una escena apaisada"): eso es lo que decide la forma de la imagen.
+    """
+    # Esta herramienta devuelve una TUPLA, y es la única del proyecto que lo
+    # hace. El motivo es la decisión más importante de toda la funcionalidad:
+    #
+    #   · lo primero (`content`) es lo que ve el modelo, y va al estado del
+    #     grafo: se guarda en la memoria y se le reenvía en cada mensaje
+    #     siguiente;
+    #   · lo segundo (`artifact`) se queda en el mensaje y no lo lee el modelo.
+    #
+    # Si el PNG viajara en el `content`, un megabyte de imagen son ~1,4 MB de
+    # base64: del orden de 350.000 tokens, más que la ventana de contexto de
+    # cualquier modelo, reenviados en cada turno mientras el recorte los deje
+    # vivos — y `_recortar()` cuenta mensajes, no bytes, así que no protege de
+    # nada. Encima se persistiría en el checkpoint de SQLite/Postgres, y ahí
+    # se reescribe entero en cada paso del grafo.
+    #
+    # De ahí la regla: en el `content` va una frase, y los bytes se quedan en
+    # disco con la ruta viajando por el `artifact`.
+    try:
+        bytes_png = imagenes.generar(descripcion)
+    except Exception as e:
+        # Por qué se devuelve el error en vez de levantarlo: es la misma razón
+        # que en clima() y está explicada arriba. Si esto explota, LangGraph
+        # corta la respuesta entera y la persona ve un error crudo en vez de
+        # una explicación.
+        return (f"No se pudo crear la imagen: {type(e).__name__}: {e}", {})
+
+    try:
+        ruta = imagenes.guardar(bytes_png)
+    except OSError as e:
+        return (f"La imagen se creó pero no se pudo guardar: {e}", {})
+
+    return (
+        "Imagen creada y enviada a la persona.",
+        {"tipo": "imagen", "ruta": str(ruta)},
+    )
+
+
 # Lo que el agente tiene atado. Cuando agregues otra herramienta, súmala aquí:
 # es la única lista que mira el grafo.
-HERRAMIENTAS = [clima]
+HERRAMIENTAS = [clima, crear_imagen]
+
+# Qué se le dice a la persona mientras cada herramienta trabaja.
+#
+# No es decoración: `crear_imagen` tarda medio minuto, y medio minuto sin una
+# palabra es indistinguible de un programa colgado. El aviso sale ANTES de
+# ejecutar la herramienta y por el mismo hilo que el texto (ver `Aviso` en
+# agente.py), así que llega mientras se trabaja y no cuando ya acabó.
+#
+# Si añades una herramienta, añade su aviso aquí. Y si no lo haces no se rompe
+# nada: simplemente esa no avisa.
+AVISOS = {
+    "clima": "🌦️ Consultando el tiempo…",
+    "crear_imagen": "🎨 Creando la imagen… esto tarda medio minuto",
+}
 
 
 # -- Las consultas ------------------------------------------------------------

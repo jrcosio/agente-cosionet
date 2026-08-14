@@ -10,11 +10,11 @@ import json
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
-from ..agente import Agente
+from ..agente import Agente, Aviso
 from ..config import (
     RAIZ,
     Config,
@@ -23,6 +23,7 @@ from ..config import (
     guardar_ajustes,
     proveedores_disponibles,
 )
+from .. import imagenes
 from ..modelos import listar_modelos, olvidar_modelos
 from ..prompts import guardar_prompt, leer_prompt
 
@@ -91,6 +92,32 @@ class AjustesEntrantes(BaseModel):
 @app.get("/")
 def inicio() -> FileResponse:
     return FileResponse(ESTATICOS / "index.html")
+
+
+@app.get("/api/imagen/{nombre}")
+def imagen(nombre: str) -> FileResponse:
+    """Sirve una imagen generada por la herramienta `crear_imagen`.
+
+    Es una ruta a mano en vez de montar `StaticFiles` sobre la carpeta, y es a
+    propósito: montar el directorio lo publica entero y para siempre, mientras
+    que así solo sale lo que pasa el filtro de abajo.
+
+    **Ese filtro es lo importante de esta función.** Sin él, un `nombre` como
+    `../../.env` serviría el archivo de tus claves a cualquiera que abra el
+    navegador. Se comprueban dos cosas: que el nombre no traiga ninguna barra
+    ni salto de directorio, y que la ruta resuelta siga cayendo dentro de la
+    carpeta de imágenes. La segunda es la que cierra los casos raros
+    (enlaces simbólicos, codificaciones) que la primera no ve.
+    """
+    if "/" in nombre or "\\" in nombre or nombre.startswith("."):
+        raise HTTPException(status_code=404, detail="No existe esa imagen.")
+
+    ruta = (imagenes.CARPETA / nombre).resolve()
+
+    if not ruta.is_relative_to(imagenes.CARPETA.resolve()) or not ruta.is_file():
+        raise HTTPException(status_code=404, detail="No existe esa imagen.")
+
+    return FileResponse(ruta, media_type="image/png")
 
 
 @app.get("/api/estado")
@@ -217,9 +244,28 @@ def mensaje(entrada: PeticionDeMensaje) -> StreamingResponse:
             transmision = agente.responder_en_vivo(entrada.texto, CONVERSACION)
 
             for pedazo in transmision:
-                yield _evento("texto", {"texto": pedazo})
+                # Un Aviso es un "estoy trabajando" y va por su propio evento:
+                # no es parte de la respuesta y en pantalla se pinta distinto.
+                # Sale por el mismo hilo que el texto a propósito, y por eso
+                # llega mientras la herramienta trabaja y no cuando ya acabó
+                # (ver la clase Aviso en agente.py).
+                if isinstance(pedazo, Aviso):
+                    # Los invisibles son para la traza de la terminal (qué
+                    # devolvió una herramienta): en pantalla sobran.
+                    if pedazo.visible:
+                        yield _evento("paso", {"texto": str(pedazo)})
+                else:
+                    yield _evento("texto", {"texto": pedazo})
 
+            # Las imágenes van antes del "fin" y después del texto. Antes no
+            # se puede: la transmisión solo sabe qué imágenes hubo cuando
+            # termina de recorrerse (el resumen se arma al final). Y tampoco
+            # importa: la herramienta tarda medio minuto y el texto llega en un
+            # segundo, así que para cuando se ve la frase la imagen ya está.
             final = transmision.resumen
+            for ruta in (final.imagenes if final else []):
+                yield _evento("imagen", {"url": f"/api/imagen/{Path(ruta).name}"})
+
             yield _evento(
                 "fin",
                 {

@@ -19,7 +19,7 @@ from agente.consola import preparar  # noqa: E402
 
 preparar()  # antes de imprimir nada, para que las tildes no rompan Windows
 
-from agente import Agente, Config, ErrorDeConfiguracion  # noqa: E402
+from agente import Agente, Aviso, Config, ErrorDeConfiguracion  # noqa: E402
 
 AMBAR = "\033[38;5;214m"
 GRIS = "\033[90m"
@@ -59,7 +59,15 @@ def main() -> int:
 
         try:
             for pedazo in transmision:
-                print(pedazo, end="", flush=True)
+                # Un Aviso es un "estoy trabajando", no la respuesta: va en
+                # gris y en su propio renglón. Como es un `str`, si no se
+                # distinguiera saldría pegado al texto y parecería parte de él.
+                if isinstance(pedazo, Aviso):
+                    # Aquí sí sale todo, incluida la letra pequeña: estás
+                    # delante del programa y es lo que quieres ver.
+                    print(f"{GRIS}{pedazo.detalle or pedazo}{FIN}\n", flush=True)
+                else:
+                    print(pedazo, end="", flush=True)
         except Exception as e:
             print(f"{ROJO}{type(e).__name__}: {e}{FIN}")
             continue

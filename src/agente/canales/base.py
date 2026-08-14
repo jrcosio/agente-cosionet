@@ -32,6 +32,16 @@ class MensajeEntrante:
     conversacion: str          # el thread_id: quién habla
     identificador: str = ""    # el id del mensaje en el canal, para no repetirlo
     datos: dict = field(default_factory=dict)  # lo crudo, por si el canal lo necesita
+    # Lo que venga con el mensaje además del texto: hoy, los identificadores de
+    # las fotos que mandó la persona. Son identificadores del canal y no bytes
+    # porque traducir un mensaje no tiene que salir a la red — descargarlos es
+    # cosa del canal, cuando toque.
+    adjuntos: list[str] = field(default_factory=list)
+    # El identificador de una nota de voz, si el mensaje era un audio en vez de
+    # texto. Va aparte de `adjuntos` porque no es lo mismo: una foto se le pasa
+    # al modelo tal cual, y un audio hay que convertirlo en texto antes — el
+    # modelo no oye (ver voz.py).
+    voz: str = ""
 
 
 class Canal(ABC):
@@ -45,6 +55,20 @@ class Canal(ABC):
 
         Es una lista y no un texto porque en mensajería conviene partir las
         respuestas largas en varios mensajes (ver respuesta.partir_respuesta).
+        """
+
+    def enviar_imagen(self, conversacion: str, ruta: str, texto: str = "") -> None:
+        """Manda un archivo de imagen a esa conversación.
+
+        Por defecto no hace nada, y es a propósito: no todos los canales saben
+        mandar archivos, y el agente no tiene por qué enterarse de cuáles sí.
+        Un canal que pueda lo sobrescribe —lo hace `Telegram`— y el que no,
+        deja pasar la imagen sin romperse. Es el mismo criterio que
+        `deberia_responder()`: implementación por defecto sensata y cada canal
+        la ajusta.
+
+        `ruta` es un archivo en el disco de esta máquina, no una URL: la
+        generó una herramienta hace un segundo (ver `Respuesta.imagenes`).
         """
 
     def deberia_responder(self, mensaje: MensajeEntrante) -> bool:
