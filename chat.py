@@ -1,10 +1,11 @@
 """Hablar con el agente desde la terminal.
 
-    python chat.py
+    uv run python chat.py
 
 Para probar con otro proveedor sin tocar el .env:
 
-    python chat.py openai
+    uv run python chat.py openai
+    uv run python chat.py chatgpt   # tu suscripción, sin clave de API
 """
 
 from __future__ import annotations

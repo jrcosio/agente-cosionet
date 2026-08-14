@@ -8,9 +8,13 @@
 *.key
 
 # El entorno virtual de tu máquina: son binarios de Windows, adentro de un
-# contenedor Linux no sirven para nada.
+# contenedor Linux no sirven para nada. Adentro lo arma uv de cero.
 .venv/
 venv/
+
+# La versión de Python de tu máquina. En la imagen la fija el FROM del
+# Dockerfile, y si entrara este archivo podría pedir una que no está.
+.python-version
 
 # Las conversaciones de MODO=test. En el servidor la memoria va a Postgres.
 datos/

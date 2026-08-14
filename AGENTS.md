@@ -12,15 +12,16 @@ Si sos una persona: leé el `README.md`, es el que está escrito para vos.
 ## Qué es esto
 
 **AgentKit.** Un agente de IA conversacional que corre en la máquina
-del usuario. Sin servidor, sin hosting. Funciona con Claude, OpenAI o Gemini,
-intercambiables desde el `.env`.
+del usuario. Sin servidor, sin hosting. Funciona con **la suscripción de
+ChatGPT** (sin clave de API, y es el proveedor por defecto), Claude, OpenAI o
+Gemini, intercambiables desde el `.env`.
 
 Construido sobre **LangChain + LangGraph**. La memoria son los *checkpointers*
 de LangGraph, indexados por `thread_id`.
 
-Es la base de una serie: primero local (esto), después Telegram, después
-WhatsApp. Todo lo que se diseñó acá apunta a que esos dos pasos no obliguen a
-reescribir el agente.
+Atiende por tres lados: terminal, una plataforma web local y **Telegram**. El
+diseño está pensado para que agregar un canal nuevo no obligue a reescribir el
+agente.
 
 **Idioma del código: español.** Nombres de funciones, variables, comentarios,
 docstrings y mensajes de error, todo en español rioplatense (voseo: *tenés*,
@@ -32,7 +33,7 @@ proveedores. **Si escribís código nuevo acá, seguí esa convención.**
 
 ## Estructura
 
-El árbol de archivos está en el **[README](README.md#qué-hay-adentro)**.
+El árbol de archivos está en el **[README](README.md#adentro)**.
 Lo que importa acá es qué hace cada uno:
 
 | Archivo | Qué resuelve |
@@ -40,6 +41,8 @@ Lo que importa acá es qué hace cada uno:
 | `agente.py` | **El agente.** El grafo de LangGraph. Empezá por acá. |
 | `herramientas.py` | Lo que el agente puede hacer además de conversar. Hoy: el clima. |
 | `modelos.py` | Crea el modelo y le pregunta al proveedor cuáles tiene |
+| `sesion_chatgpt.py` | **La suscripción de ChatGPT**: la credencial sale de la sesión de Codex, no del `.env` |
+| `modelo_chatgpt.py` | El `ChatOpenAI` apuntado a esa suscripción, con las tres reglas raras del endpoint |
 | `memoria.py` | Los checkpointers: `ram` / `sqlite` / `postgres` |
 | `prompts.py` | Lee y guarda `prompts/sistema.md` |
 | `respuesta.py` | Parte una respuesta larga en varios mensajes |
@@ -47,12 +50,11 @@ Lo que importa acá es qué hace cada uno:
 | `config.py` | Lee el `.env`. Única fuente de configuración. |
 | `canales/base.py` | La forma de un canal |
 | `canales/telegram.py` | **El bot de Telegram.** Polling, corre en tu máquina. |
-| `canales/chatwoot.py` | **El canal de WhatsApp**, con Chatwoot en el medio |
-| `canales/buffer.py` | Junta la ráfaga de mensajes cortos y contesta una vez |
-| `web/webhook.py` | **El servidor que atiende WhatsApp.** Es lo que corre en producción. |
-| `../webhook_chatwoot.py` | El punto de entrada del webhook |
-| `../Dockerfile` | Empaqueta el **webhook** (`webhook_chatwoot.py`); el bot de Telegram queda adentro por si lo querés correr |
-| `web/app.py` | La plataforma de pruebas (FastAPI + un solo HTML) — **no es** el webhook |
+| `../bot_telegram.py` | El punto de entrada del bot |
+| `../Dockerfile` | Empaqueta el **bot de Telegram** (`bot_telegram.py`). Instala con `uv sync --locked`; no expone puertos |
+| `../pyproject.toml` | Las dependencias, para uv. `package = false`: el paquete **no** se instala |
+| `../uv.lock` | Las versiones exactas. Se commitea: es lo que hace que todos instalen lo mismo |
+| `web/app.py` | La plataforma de pruebas (FastAPI + un solo HTML). Local, un solo usuario |
 
 ---
 
@@ -61,8 +63,8 @@ Lo que importa acá es qué hace cada uno:
 Entender esto evita romper cosas:
 
 **1. El agente recibe texto y devuelve texto.**
-No sabe si lo llaman desde la terminal, la web, Telegram o WhatsApp. Esa
-frontera es deliberada: es lo que permite agregar canales sin tocarlo.
+No sabe si lo llaman desde la terminal, la web o Telegram. Esa frontera es
+deliberada: es lo que permite agregar canales sin tocarlo.
 `Agente.responder(texto, conversacion) -> Respuesta`.
 
 **2. La memoria es un checkpointer intercambiable.**
@@ -75,7 +77,11 @@ Por eso se puede editar con el agente corriendo.
 
 **4. Toda la configuración sale del `.env`, vía `config.py`.**
 Ninguna credencial en el código, ni una. Las claves se leen únicamente en
-`config.py`.
+`config.py`. La única credencial que no está en el `.env` es la de
+`PROVEEDOR=chatgpt`, porque ahí no hay nada que pegar: la escribe Codex al
+entrar con la cuenta. Se lee en `sesion_chatgpt.py` y entra al programa por
+`config.py` igual que las otras, así que para `Agente` sigue siendo
+`config.api_key` y nada más.
 
 ---
 
@@ -83,12 +89,14 @@ Ninguna credencial en el código, ni una. Las claves se leen únicamente en
 
 | Querés… | Archivo | Cómo |
 |---|---|---|
-| Agregar un proveedor nuevo | `modelos.py` | Una rama en `crear_modelo()` + una en `listar_modelos()` |
+| Agregar un proveedor nuevo | `modelos.py` | Una rama en `crear_modelo()` + una en `listar_modelos()`, y sumarlo a `PROVEEDORES_VALIDOS` en `config.py` |
+| Que la web muestre bien el proveedor nuevo | `web/static/index.html` | Un nombre en `NOMBRES` (y en `FALTA`, si lo que le falta no es una clave del `.env`) |
 | Cambiar dónde se guardan las charlas | `.env` (`MODO`) | O una función nueva en `memoria.py` |
 | Cambiar la personalidad | `prompts/sistema.md` | Es texto plano |
 | **Agregar herramientas** | `herramientas.py` | Una función con `@tool` + sumarla a `HERRAMIENTAS`. El grafo ya está armado. |
-| Agregar un canal (Telegram, WhatsApp) | archivo nuevo | Traducir mensaje entrante → `agente.responder(texto, conversacion=<chat_id>)` |
+| Agregar un canal | archivo nuevo en `canales/` | Traducir mensaje entrante → `agente.responder(texto, conversacion=<chat_id>)` |
 | Nueva variable de configuración | `config.py` | Campo en `Config` + lectura en `desde_entorno()` + línea en `.env.example` |
+| **Agregar una dependencia** | `pyproject.toml` | Y también en el `requirements*.txt` que corresponda, y después `uv lock`. Si te olvidás de alguno de los tres, falla `tests/test_dependencias.py` |
 | Que se pueda editar desde la web | `config.py` | Agregarla a `AJUSTABLES` + campo en `AjustesEntrantes` (`web/app.py`) + control en la barra de estado |
 | Tocar la interfaz | `web/static/index.html` | Un solo archivo, sin build ni npm |
 
@@ -98,7 +106,8 @@ Ninguna credencial en el código, ni una. Las claves se leen únicamente en
 
 - **Ninguna credencial en el código.** Todas viven en el `.env` y se leen en
   `config.py`. (Sí hay algún `os.getenv()` fuera de ahí, pero solo para rutas
-  y nunca para una clave.)
+  y nunca para una clave. La excepción de `sesion_chatgpt.py` está explicada
+  en la decisión 4: tampoco está en el código, está en `~/.codex/auth.json`.)
 - **Español**, según la convención de arriba.
 - **Comentar el *por qué*, no el *qué*.** Este repo es material didáctico: si
   algo se hace de una forma no obvia, explicá la razón.
@@ -113,48 +122,63 @@ Ninguna credencial en el código, ni una. Las claves se leen únicamente en
 - **Los tests no gastan tokens.** Usan `GenericFakeChatModel`. Si agregás una
   función que llama a un proveedor, el test va con modelo falso.
 - **Sin dependencias nuevas** salvo que resuelvan algo que no se puede hacer
-  con lo que ya está.
+  con lo que ya está. Y si sumás una, va en los dos lados (`pyproject.toml` y
+  el `requirements*.txt` que corresponda) más un `uv lock`: son tres pasos y
+  el test los revisa.
 
 ---
 
 ## Cómo se corre
 
-La instalación paso a paso está en el
-**[README](README.md#arrancar-en-3-pasos)** — no la repito acá para que no se
-desincronicen. Lo que hace falta saber:
+La instalación paso a paso está en el **[README](README.md#arrancar)** — no la
+repito acá para que no se desincronicen. Lo que hace falta saber:
+
+**Las dependencias las maneja `uv`.** `uv sync` arma el entorno en `.venv/`
+con las versiones del `uv.lock`, y `uv run` lo revisa antes de cada corrida.
+No hay que activar nada:
 
 ```bash
-python servidor.py         # la plataforma de pruebas, en http://localhost:8000
-python chat.py             # lo mismo pero por terminal
-python bot_telegram.py     # el agente atendiendo en Telegram (polling, local)
-python webhook_chatwoot.py # el agente atendiendo WhatsApp (necesita servidor)
+uv run python servidor.py         # la plataforma de pruebas, en http://localhost:8000
+uv run python chat.py             # lo mismo pero por terminal
+uv run python bot_telegram.py     # el agente atendiendo en Telegram (polling, local)
 ```
 
-El último es el único que **no** sirve en tu máquina: es un webhook, así que
-Chatwoot tiene que poder entrar. Levantalo local solo para confirmar que
-arranca (`GET /salud`); para probarlo de verdad tiene que estar desplegado.
+Si el entorno está activado (`source .venv/bin/activate`), el `uv run` sobra.
+Y con pip también sigue andando todo: los `requirements*.txt` están al día.
 
 El bot se llama `bot_telegram.py` y no `telegram.py` a propósito: un módulo
 llamado `telegram` en la raíz taparía la librería del mismo nombre si algún
 día se instala.
 
-Para `MODO=produccion` hacen falta dos paquetes que **no** están en el
-`requirements.txt`, y en Windows el segundo no es opcional:
+Para `MODO=produccion` hacen falta dos paquetes más, que están en el grupo
+`produccion` del `pyproject.toml` y no se instalan solos:
 
 ```bash
-pip install "langgraph-checkpoint-postgres>=3.1,<4" "psycopg[binary]"
+uv sync --group produccion
 ```
 
-Para los tests hace falta pytest, que **no** está en `requirements.txt`:
+Los tests van con `uv run pytest`, sin instalar nada antes: `pytest` está en el
+grupo `dev`, y ese grupo uv lo incluye por defecto.
 
-```bash
-pip install -r requirements-dev.txt
-pytest
-```
+`uv run pytest` da **96 pasados y 1 salteado**: el salteado es
+`test_la_conexion_de_postgres_no_se_la_lleva_el_recolector`, que necesita el
+grupo `produccion`. Con `uv sync --group produccion` pasan los 97. Si agregás
+un test que dependa de una dependencia opcional, va con `importorskip` como
+ese: la falta de un paquete que no se instala solo no es un test roto.
 
-No hay `pyproject.toml`: el paquete no se instala. Cada punto de entrada y
-cada test hace `sys.path.insert(0, "src")`, así que `pytest` se corre desde la
-raíz del repo y no desde otro lado.
+**Hay `pyproject.toml`, pero el paquete sigue sin instalarse.** Esa parte no
+cambió con uv y no hay que cambiarla: `[tool.uv] package = false` es lo que se
+lo impide. Cada punto de entrada y cada test hace `sys.path.insert(0, "src")`,
+así que `pytest` se corre desde la raíz del repo y no desde otro lado. Si
+alguien saca esa línea, uv empieza a instalar el proyecto en cada sync y
+quedan dos copias del código en juego —la instalada y la de `src/`—; basta con
+no hacer un sync para estar editando una y ejecutando la otra.
+`tests/test_dependencias.py` lo cuida.
+
+**La lista de dependencias está en dos lados a propósito:** `pyproject.toml`
+(la que resuelve el `uv.lock`) y los `requirements*.txt` (para quien no tenga
+uv, y porque están comentados como material de lectura). Si tocás una, tocá la
+otra — `tests/test_dependencias.py` falla si no lo hacés.
 
 ---
 
@@ -171,6 +195,34 @@ Cosas que parecen bugs y no lo son, o que cuestan de encontrar:
   ofrece el propio error es apagarle el razonamiento al modelo, que es pagar
   por uno y usar otro. Con modelos viejos (gpt-4.1) el problema no aparece, así
   que si lo sacás no lo vas a ver hasta probar con un gpt-5.
+- **La suscripción de ChatGPT y la API de OpenAI no son el mismo endpoint.**
+  `PROVEEDOR=openai` va a `api.openai.com` con una clave y se paga por token.
+  `PROVEEDOR=chatgpt` va a `chatgpt.com/backend-api/codex`, que es por donde
+  entra Codex con tu cuenta. Es la Responses API, así que `ChatOpenAI` sirve
+  igual, pero pide tres cosas distintas y **cada una es un 400 sin pista** si
+  falta (todo esto está resuelto en `modelo_chatgpt.py`):
+  · el prompt del sistema va en `instructions`, no como mensaje —
+  *"System messages are not allowed"*;
+  · `store` tiene que estar y estar en `false` — *"Store must be set to
+  false"*;
+  · solo contesta en streaming — *"Stream must be set to true"*, y por eso
+  `responder()` (que no usa streaming) igual pide el stream y lo junta.
+  Nada de esto está documentado en ningún lado: es un canal de un cliente
+  propio, no una API con contrato. Si algún día se cae sin que nadie toque
+  nada, empezá por ahí.
+- **`MAX_TOKENS` no se aplica con `PROVEEDOR=chatgpt`.** Ese endpoint contesta
+  *"Unsupported parameter: max_output_tokens"*, así que el tope de salida no se
+  manda y lo decide él. Por eso la rama de `chatgpt` en `crear_modelo()` va
+  **antes** de `limitar_max_tokens()`: no hay nada que ajustar y consultarlo
+  sería una llamada al vicio. En la barra de la plataforma ese chip dice
+  "lo decide ChatGPT" en vez de un número que no haría nada.
+- **El token de ChatGPT vence cada diez días y Codex lo rota solo.** Por eso
+  `sesion_chatgpt.py` no cachea nada y `modelo_chatgpt._renovar_credencial()`
+  lo relee antes de cada pedido: un bot de Telegram que arrancó antes de la
+  rotación seguiría mandando el viejo y empezaría a comer 401 de la nada.
+- **`PROVEEDOR=chatgpt` es para tu máquina, no para el contenedor.** La sesión
+  vive en `~/.codex`, que en el contenedor no existe. Terminal, plataforma y
+  Telegram sí; el bot desplegado en un servidor va con clave de API.
 - **Los resultados de las herramientas también salen por el stream.**
   `responder_en_vivo()` filtra los `ToolMessage` a propósito: sin ese filtro, la
   persona ve el texto crudo de la consulta al clima en pantalla y después la
@@ -194,6 +246,11 @@ Cosas que parecen bugs y no lo son, o que cuestan de encontrar:
   atiende en varios hilos y sin eso rompe.
 - **El pool de Postgres se deja abierto a propósito** en `memoria.postgres()`.
   Si se cierra el context manager, el checkpointer muere en el primer mensaje.
+- **`--frozen` y `--locked` no son lo mismo, y la diferencia se paga en
+  producción.** `uv sync --frozen` instala lo que dice el `uv.lock` **sin
+  comprobarlo** contra el `pyproject.toml`: si alguien agregó una dependencia y
+  no corrió `uv lock`, el deploy sale bien y sin esa dependencia. `--locked`
+  compara y rompe el build. El Dockerfile usa `--locked` a propósito.
 - **`langgraph-checkpoint-postgres` tiene que ser 3.x.** La 2.x arrastra un
   `langgraph-checkpoint` viejo (2.1) que se pelea con `langgraph` 1.2 y con el
   checkpointer de SQLite. `pip install` lo deja instalar igual y lo avisa como
@@ -211,10 +268,7 @@ Cosas que parecen bugs y no lo son, o que cuestan de encontrar:
   desplegarlo, el panel le asigna un dominio solo y después lo marca como
   *unhealthy* porque nadie contesta ahí. No está roto: con polling nadie
   entra al bot, sale él. Hay que borrarle el dominio y dejar el health check
-  apagado. **Ojo que con el webhook de WhatsApp es al revés**: ese sí escucha
-  en el 8000, sí necesita dominio y sí tiene que tener el health check
-  prendido apuntando a `/salud`. Son dos formas opuestas de desplegar el
-  mismo repo, y el Dockerfile hoy trae la segunda.
+  apagado. El Dockerfile ya está armado para eso: no expone ningún puerto.
 - **Dos instancias del bot se roban los mensajes.** Telegram le entrega cada
   mensaje a quien lo pide primero, así que si corren el servidor y la máquina
   local a la vez, las respuestas salen la mitad de cada lado. Es la falla más
@@ -228,8 +282,22 @@ Cosas que parecen bugs y no lo son, o que cuestan de encontrar:
   siguen contando mensajes. Lo que cambió es que el corte cae siempre en el
   borde de un turno, así que el total puede quedar unos mensajes abajo del tope
   antes que partir una vuelta de herramienta al medio.
+- **Sin `.env`, el proveedor es `chatgpt`.** Lo fija `PROVEEDOR_POR_DEFECTO` en
+  `config.py`. Antes era `claude`, y en un clone recién bajado eso mostraba
+  "Falta la clave de claude" en la plataforma aunque hubiera una sesión de
+  ChatGPT lista y el botón prendido. `chatgpt` es el único que puede estar
+  listo sin que nadie pegue una clave, así que es el que corresponde de
+  arranque. El orden de `PROVEEDORES_VALIDOS` también cambió por eso: es el
+  orden de los botones en la web.
 - **La lista de modelos de OpenAI trae todo junto** (imágenes, audio,
   embeddings) y hay que filtrarla; la de Anthropic ya viene limpia y ordenada.
+- **El listado de la suscripción pide la versión del cliente** y devuelve
+  menos modelos si es vieja (con una 0.100 llegan tres; con la de hoy, seis).
+  `_version_de_codex()` la saca de `~/.codex/models_cache.json`, que Codex
+  mantiene al día, en vez de dejar un número escrito que envejece. De ahí
+  salen los tres de hoy: **Sol** (`gpt-5.6-sol`), **Terra** (`gpt-5.6-terra`)
+  y **Luna** (`gpt-5.6-luna`), en ese orden porque es el `priority` que manda
+  el propio proveedor.
 - **`max_salida` solo lo informan Anthropic y Google.** OpenAI no lo expone en
   su listado, así que queda en `None` y el tope no se ajusta para esos modelos.
   **Consecuencia real:** si venís de un modelo de Claude con tope alto y pasás
@@ -312,10 +380,10 @@ cambia mucho entre uno y otro:
 
 | | Cómo llegan los mensajes | Necesita URL pública |
 |---|---|---|
-| **Telegram** | *Polling*: tu programa pregunta "¿hay mensajes?" cada tanto | No |
-| **WhatsApp (Meta)** | *Webhook*: Meta le pega a una URL tuya | Sí |
+| **Polling** (lo que usa Telegram) | Tu programa pregunta "¿hay mensajes?" cada tanto | No |
+| **Webhook** | El canal le pega a una URL tuya | Sí, con HTTPS |
 
-La forma de los dos, igual:
+La forma es la misma en los dos casos:
 
 ```python
 # 1. Llega algo del canal y lo traducís
@@ -333,7 +401,7 @@ mensajes = agente.responder_partido(entrante.texto, conversacion=entrante.conver
 canal.enviar(entrante.conversacion, mensajes)
 ```
 
-**El webhook de WhatsApp se monta en su propia app FastAPI**, no en la de la
+**Un canal por webhook se monta en su propia app FastAPI**, no en la de la
 plataforma de pruebas: son dos cosas distintas y la de pruebas no sale de
 `localhost`.
 
@@ -344,55 +412,27 @@ equivocar: si dos personas comparten el mismo valor, comparten la conversación.
 
 ## Hacia dónde va (para no diseñar en contra)
 
-Esto todavía **no está implementado** y no hay que implementarlo sin que lo
-pidan. Está acá para que cualquier cosa que se agregue al núcleo no lo haga
-imposible después.
+**Los canales que hay hoy:** la terminal, la plataforma web local y Telegram.
+`canales/telegram.py` implementa `Canal`, `conversacion` = el `chat_id`, y el
+bucle que las pega está en `bot_telegram.py` (raíz). Anda por *polling*, así
+que corre en la máquina de uno sin dominio ni puertos abiertos. Sirve igual
+con `MODO=test` (SQLite) que con `MODO=produccion` (Postgres): el agente no
+cambia.
 
-**Video 2 — Telegram. ✅ Hecho.** `canales/telegram.py` implementa `Canal`,
-`conversacion` = el `chat_id`, y el bucle que las pega está en
-`bot_telegram.py` (raíz). Anda por *polling*, así que corre en la máquina de
-uno sin dominio ni puertos abiertos. Sirve igual con `MODO=test` (SQLite) que
-con `MODO=produccion` (Postgres): el agente no cambia.
+**Hubo un canal de WhatsApp (con Chatwoot en el medio) y se quitó**, a pedido.
+Está en el historial de git si algún día hace falta volver a mirarlo:
+`canales/chatwoot.py`, `canales/buffer.py`, `web/webhook.py` y
+`webhook_chatwoot.py`, con sus tests en `tests/test_chatwoot.py`. **No lo
+vuelvas a agregar sin que te lo pidan.**
 
-**Video 3 — WhatsApp. ✅ Hecho, con Chatwoot en el medio.**
-
-El agente **no le habla a Meta**: le habla a Chatwoot, que ya está conectado
-a WhatsApp. Eso cambia el diseño respecto de lo que decía este archivo antes,
-y para mejor: la mitad de las piezas las resuelve Chatwoot.
-
-    persona → WhatsApp → Meta → Chatwoot → webhook → agente
-                                   ↑                    │
-                                   └──── API REST ──────┘
-
-| Pieza | Dónde quedó | Cómo se resolvió |
-|---|---|---|
-| Autenticar quién llama al webhook | `web/webhook.py` | Chatwoot **no firma** sus webhooks (no hay HMAC como en Meta): la seguridad es un token secreto en la URL, `CHATWOOT_WEBHOOK_TOKEN` |
-| Responder 200 rápido y procesar aparte | `web/webhook.py` | El 200 sale antes de pensar la respuesta; si no, Chatwoot reintenta y el agente contesta de más |
-| Descartar el mensaje repetido por id | `Chatwoot.deberia_responder()` | Cola de los últimos 1.000 ids |
-| **Que el agente no se conteste a sí mismo** | `Chatwoot.deberia_responder()` | Solo se atiende `message_type == "incoming"`. Sin esto es un ida y vuelta infinito que gasta tokens en cada vuelta |
-| Juntar la ráfaga de mensajes | `canales/buffer.py` | En memoria, no Redis: hay un solo proceso atendiendo. `BUFFER_SEGUNDOS` |
-| Partir la respuesta en varios globos | `respuesta.partir_respuesta()` | Ya estaba |
-| Traspaso a una persona | `Chatwoot.deberia_responder()` | La etiqueta `CHATWOOT_ETIQUETA_HUMANO` apaga al bot en esa conversación, con un clic desde la bandeja |
-| Notas privadas | `Chatwoot.deberia_responder()` | Son para el equipo: el agente no las contesta |
-| Ventana de 24h y plantillas | Lo maneja Chatwoot | Por eso no está acá |
-
-**El `conversacion` (thread_id) es el id de conversación de Chatwoot.** Un
-hilo en la bandeja es un hilo de memoria del agente, y es también lo que se
-necesita para contestar: sirve para las dos cosas.
-
-**Decisiones ya tomadas** (no volver a discutirlas):
+**Decisiones que siguen en pie** (no volver a discutirlas):
 
 - **Un solo repo.** Cada canal es un archivo nuevo; el núcleo no se toca.
-  Se cumplió: `agente.py` no se tocó para que atienda WhatsApp.
-- **Chatwoot es opcional**, no obligatorio. El agente sigue andando por
-  terminal, web y Telegram sin él.
-- ~~**Redis** para juntar los mensajes~~ → **quedó en memoria**
-  (`canales/buffer.py`). Redis resolvía compartir la ráfaga entre varios
-  procesos, y hoy hay uno solo atendiendo. Sumar una base entera para eso era
-  pagar un problema que todavía no tenemos. Cuando se escale a varios
-  procesos se cambia esa clase y el webhook ni se entera.
-- **`MODO=test` responde y listo.** Todo lo de arriba corre solo en
-  `MODO=produccion`.
+  Se cumplió: `agente.py` no se tocó para agregar Telegram.
+- **Cada canal es opcional.** El agente sigue andando por terminal y por la
+  web sin ninguno configurado.
+- **`MODO=test` responde y listo.** Postgres es para cuando hay varios
+  procesos atendiendo.
 
 **Ya preparado en el núcleo para que eso entre sin reescribir nada:**
 

@@ -83,7 +83,7 @@ def postgres(dsn: str) -> "BaseCheckpointSaver":
     """Memoria en Postgres. → MODO=produccion
 
     Para cuando hay muchas conversaciones a la vez y más de un proceso
-    respondiendo: es el caso de WhatsApp.
+    respondiendo: es el caso de un bot con mucha gente escribiendo a la vez.
     """
     try:
         from langgraph.checkpoint.postgres import PostgresSaver

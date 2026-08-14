@@ -18,7 +18,7 @@ Mientras el modelo no pida nada, el camino es el de siempre: un solo paso y
 responde. Las herramientas viven en herramientas.py.
 
 El agente no sabe si lo están usando desde la terminal, desde la web o desde
-WhatsApp. Recibe texto y devuelve texto. Esa frontera es lo que después
+Telegram. Recibe texto y devuelve texto. Esa frontera es lo que después
 permite enchufarlo a cualquier canal sin tocar una línea de acá adentro.
 """
 
@@ -194,8 +194,8 @@ class Agente:
         """Le mandás un mensaje, te devuelve la respuesta completa.
 
         `conversacion` es el thread_id de LangGraph: cada valor distinto es
-        una conversación separada, con su propia memoria. En Telegram o
-        WhatsApp acá va el número o el chat_id de la persona.
+        una conversación separada, con su propia memoria. En Telegram acá va
+        el chat_id de la persona.
         """
         salida = self.grafo.invoke(
             {"messages": [HumanMessage(texto)]},
@@ -256,8 +256,8 @@ class Agente:
     ) -> list[str]:
         """Como responder(), pero la respuesta ya viene partida en mensajes.
 
-        Es lo que van a usar Telegram y WhatsApp: en mensajería una respuesta
-        larga se manda en varios globos cortos, no en un ladrillo.
+        Es lo que usa Telegram: en mensajería una respuesta larga se manda en
+        varios globos cortos, no en un ladrillo.
         """
         return partir_respuesta(self.responder(texto, conversacion).texto)
 

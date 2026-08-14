@@ -1,0 +1,94 @@
+# ---------------------------------------------------------------------------
+#  Las dependencias del proyecto, para uv.
+#
+#  Acá está la lista de verdad: uv lee este archivo y escribe el uv.lock con
+#  las versiones exactas que resolvió. Los requirements*.txt siguen existiendo
+#  para quien no tenga uv, y hay un test que los compara con esta lista para
+#  que no se desincronicen (tests/test_dependencias.py).
+#
+#  Arrancar:
+#
+#      uv sync                        las dependencias de siempre
+#      uv sync --group produccion     y además Postgres
+#      uv run python chat.py          hablarle por la terminal
+#      uv run pytest                  los tests (uv instala pytest solo)
+#
+#  No hace falta crear el entorno ni activarlo: uv lo hace en .venv/ la
+#  primera vez y lo mantiene al día en cada `uv run`.
+# ---------------------------------------------------------------------------
+
+[project]
+# El nombre y la versión están porque los metadatos los piden, pero no los
+# lee nadie: este paquete no se instala (ver [tool.uv] abajo).
+name = "agentkit"
+version = "0.1.0"
+description = "Un agente de IA conversacional que corre en tu computadora"
+license = "MIT"
+requires-python = ">=3.10"
+# No hay `readme` acá a propósito: apuntaría a un archivo, y en la imagen de
+# Docker no copiamos los .md. Como el paquete no se construye nunca, el campo
+# no aportaba nada y sí podía romper el build.
+
+# Las versiones están acotadas a propósito: este repo vive en la descripción
+# de un video y no se tiene que romper solo cuando salga la próxima versión
+# mayor de LangChain.
+dependencies = [
+    # --- LangChain + LangGraph ---------------------------------------------
+    # LangGraph es lo que le da la memoria al agente y lo que después nos deja
+    # enchufarlo a Telegram sin reescribir el agente.
+    "langchain-core>=1.5,<2",
+    "langgraph>=1.2,<2",
+    "langgraph-checkpoint>=4.1,<5",
+    "langgraph-checkpoint-sqlite>=3.1,<4",   # la memoria de MODO=test
+
+    # --- Proveedores de modelos --------------------------------------------
+    # langchain-openai sirve para dos: PROVEEDOR=openai (con clave de API) y
+    # PROVEEDOR=chatgpt (con tu suscripción). El segundo no suma nada más.
+    "langchain-anthropic>=1.5,<2",           # Claude
+    "langchain-openai>=1.4,<2",              # OpenAI y la suscripción de ChatGPT
+    "langchain-google-genai>=4.3,<5",        # Gemini
+
+    # --- Plataforma de pruebas (la web local) ------------------------------
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
+    "python-dotenv>=1.0,<2",
+]
+
+[dependency-groups]
+# Los grupos NO se instalan solos con `uv sync`... salvo `dev`, que sí. Es la
+# convención de uv y acá viene bien: los tests siempre están a mano.
+dev = [
+    "pytest>=8.0,<9",
+]
+
+# Solo para MODO=produccion:  uv sync --group produccion
+#
+# Ojo con las dos versiones, que cada una cuesta una tarde:
+#
+#   · langgraph-checkpoint-postgres tiene que ser 3.x. La serie 2.x arrastra
+#     un langgraph-checkpoint viejo que se pelea con el langgraph de arriba y
+#     deja el entorno roto. (uv esto lo resuelve solo: si pusieras la 2.x, no
+#     resuelve y te lo dice. pip te dejaba instalarla y avisaba en un renglón
+#     perdido entre otros veinte.)
+#   · psycopg va con [binary], que trae la libpq adentro. Sin eso, en Windows
+#     el import falla con "no pq wrapper available" y el error no se parece
+#     en nada a lo que falta.
+produccion = [
+    "langgraph-checkpoint-postgres>=3.1,<4",
+    "psycopg[binary]>=3.2,<4",
+]
+
+[tool.uv]
+# **Esto es lo importante de todo el archivo.**
+#
+# Sin esta línea, uv trataría al proyecto como un paquete: lo compilaría y lo
+# instalaría en el entorno en cada `uv sync`. No queremos eso, y no es
+# capricho — es la misma decisión que ya tenía el repo antes de uv:
+#
+#   el paquete no se instala; cada punto de entrada y cada test hace
+#   sys.path.insert(0, "src") y se corre desde la raíz del repo.
+#
+# Esa decisión es para que el código se lea y se toque sin ceremonia: clonás,
+# corrés `python chat.py` y ya está. Con `package = false`, uv se ocupa solo
+# de las dependencias y todo lo demás sigue funcionando exactamente igual.
+package = false

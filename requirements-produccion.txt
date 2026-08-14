@@ -1,9 +1,11 @@
 # Lo que hace falta cuando el agente corre en un servidor, atendiendo de
 # verdad. Es lo de siempre más Postgres:
 #
-#   pip install -r requirements-produccion.txt
+#   uv sync --group produccion               con uv
+#   pip install -r requirements-produccion.txt   con pip
 #
-# Es lo que instala el Dockerfile.
+# El Dockerfile usa el primero. Este archivo es el mismo grupo `produccion`
+# del pyproject.toml, escrito para pip.
 -r requirements.txt
 
 # --- MODO=produccion: la memoria en Postgres -------------------------------

@@ -281,7 +281,13 @@ def test_la_conexion_de_postgres_no_se_la_lleva_el_recolector(monkeypatch):
     import gc
     from contextlib import contextmanager
 
-    import langgraph.checkpoint.postgres as postgres_de_langgraph
+    # El paquete de Postgres está en el grupo `produccion`, que no se instala
+    # solo (`uv sync --group produccion`). Sin él este test se saltea en vez de
+    # fallar: la falta de una dependencia opcional no es un test roto.
+    postgres_de_langgraph = pytest.importorskip(
+        "langgraph.checkpoint.postgres",
+        reason="falta el grupo produccion: uv sync --group produccion",
+    )
 
     from agente.memoria import postgres
 

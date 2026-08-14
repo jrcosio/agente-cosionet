@@ -1,10 +1,22 @@
+# ---------------------------------------------------------------------------
+#  El camino con pip:
+#
+#      pip install -r requirements.txt
+#
+#  Con uv este archivo no hace falta:  uv sync
+#
+#  Sigue acá para quien no tenga uv (y porque está comentado para leerse). La
+#  lista de verdad, la que resuelve el uv.lock, vive en pyproject.toml, y
+#  tests/test_dependencias.py se encarga de que las dos digan lo mismo.
+# ---------------------------------------------------------------------------
+
 # Las versiones están acotadas a propósito: este repo vive en la
 # descripción de un video y no se tiene que romper solo cuando salga
 # la próxima versión mayor de LangChain.
 
 # --- LangChain + LangGraph -------------------------------------------------
 # LangGraph es lo que le da la memoria al agente y lo que después nos deja
-# enchufarlo a Telegram o WhatsApp sin reescribir el agente.
+# enchufarlo a Telegram sin reescribir el agente.
 langchain-core>=1.5,<2
 langgraph>=1.2,<2
 langgraph-checkpoint>=4.1,<5
@@ -12,9 +24,14 @@ langgraph-checkpoint-sqlite>=3.1,<4   # la memoria de MODO=test
 
 # --- Proveedores de modelos ------------------------------------------------
 # Podés borrar los que no vayas a usar.
-langchain-anthropic>=1.5,<2     # Claude
-langchain-openai>=1.4,<2         # OpenAI
+langchain-anthropic>=1.5,<2      # Claude
+langchain-openai>=1.4,<2         # OpenAI, y también la suscripción de ChatGPT
 langchain-google-genai>=4.3,<5   # Gemini
+
+# PROVEEDOR=chatgpt no suma ninguna dependencia: usa el mismo
+# langchain-openai de arriba apuntado a otra dirección, y la sesión la lee
+# con la biblioteca estándar. Lo único que hace falta afuera es haber
+# entrado con tu cuenta en la app de ChatGPT (o con: codex login).
 
 # --- Plataforma de pruebas (la web local) ----------------------------------
 fastapi>=0.115,<1

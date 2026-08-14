@@ -1,6 +1,6 @@
 """Partir la respuesta en varios mensajes.
 
-En un chat de web una respuesta larga se lee bien de un tirón. En WhatsApp
+En un chat de web una respuesta larga se lee bien de un tirón. En Telegram
 o Telegram no: un bloque de 800 caracteres se ve como un ladrillo y no
 parece escrito por una persona.
 

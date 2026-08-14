@@ -1,6 +1,6 @@
 """Levanta la plataforma de pruebas en el navegador.
 
-    python servidor.py
+    uv run python servidor.py
 
 Después abrí:  http://localhost:8000
 """

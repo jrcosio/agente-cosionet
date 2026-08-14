@@ -1,5 +1,8 @@
-# Para correr los tests:
+# Para correr los tests con pip:
 #   pip install -r requirements-dev.txt
 #   pytest
+#
+# Con uv no hace falta nada de esto: `uv run pytest` instala el grupo `dev`
+# del pyproject.toml solo. Este archivo es el mismo grupo, para pip.
 -r requirements.txt
 pytest>=8.0,<9

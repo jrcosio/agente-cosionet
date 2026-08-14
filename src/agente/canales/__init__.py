@@ -1,8 +1,7 @@
 """Los canales por donde el agente atiende.
 
     base.py       la forma que tiene un canal
-    telegram.py   próximo video
-    whatsapp.py   el que viene después
+    telegram.py   el bot de Telegram, por polling
 
 El agente no cambia entre uno y otro: cada canal es un archivo nuevo que
 lo usa.

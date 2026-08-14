@@ -1,7 +1,7 @@
 """Qué es un canal.
 
-Un canal es el pegamento entre un lugar donde la gente escribe (Telegram,
-WhatsApp, tu web) y el agente. Traduce en las dos direcciones:
+Un canal es el pegamento entre un lugar donde la gente escribe (Telegram, tu
+web, lo que venga) y el agente. Traduce en las dos direcciones:
 
     mensaje que llega  →  agente.responder(texto, conversacion)  →  mensaje que sale
 
@@ -14,10 +14,8 @@ las charlas de distintas personas no se mezclen:
 
     plataforma de pruebas  →  siempre "web", hay un solo usuario
     Telegram               →  el chat_id
-    WhatsApp               →  el número de teléfono
 
-Este archivo es solo la forma. Los canales de verdad llegan en los próximos
-videos de la serie.
+Este archivo es solo la forma. El canal de verdad está en `telegram.py`.
 """
 
 from __future__ import annotations

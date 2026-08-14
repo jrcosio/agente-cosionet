@@ -1,6 +1,7 @@
 MIT License
 
 Copyright (c) 2026 Basdonax AI
+Copyright (c) 2026 J. Ramón Blanco
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +20,18 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+-------------------------------------------------------------------------------
+
+Sobre las dos líneas de copyright
+
+Este proyecto es un fork de AgentKit, de Basdonax AI:
+https://github.com/fcori47/basdonax-ai-agentkit
+
+La primera línea es la del proyecto original y se conserva tal cual, que es
+exactamente lo que pide la licencia MIT: el aviso de copyright viaja con el
+código. La segunda cubre los cambios hechos en este fork:
+https://github.com/jrcosio/agente-cosionet
+
+Los dos se publican bajo los mismos términos, así que para quien use este
+código no cambia nada: es MIT de punta a punta.

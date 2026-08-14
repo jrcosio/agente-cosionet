@@ -31,7 +31,7 @@ ESTATICOS = Path(__file__).parent / "static"
 app = FastAPI(title="AgentKit — plataforma de pruebas")
 
 # Un agente vivo por vez. La conversación se identifica con un thread_id
-# (acá siempre "web"); en Telegram o WhatsApp sería el chat de cada persona.
+# (acá siempre "web"); en Telegram sería el chat de cada persona.
 CONVERSACION = "web"
 
 _agente: Agente | None = None

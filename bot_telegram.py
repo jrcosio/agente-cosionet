@@ -1,6 +1,6 @@
 """El agente atendiendo en Telegram.
 
-    python bot_telegram.py
+    uv run python bot_telegram.py
 
 Corre en tu computadora: no hace falta hosting, ni dominio, ni abrir puertos.
 El programa le pregunta a Telegram si hay mensajes nuevos (polling), así que
@@ -68,7 +68,7 @@ def atender(agente: Agente, canal: Telegram) -> None:
     """El bucle: llega un mensaje, contesta el agente, sale por el canal.
 
     Estas líneas son las mismas para cualquier canal. Lo único que cambia de
-    Telegram a WhatsApp es de dónde salen los mensajes y por dónde se mandan
+    un canal a otro es de dónde salen los mensajes y por dónde se mandan
     — el agente ni se entera.
     """
     for entrante in canal.escuchar():

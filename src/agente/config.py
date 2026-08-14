@@ -1,6 +1,12 @@
 """Configuración del agente.
 
 Todo sale del archivo .env. Nada de credenciales escritas en el código.
+
+Con una excepción, y es la del proveedor `chatgpt`: ese no usa una clave de
+API sino tu suscripción de ChatGPT, y esa credencial no la pegás vos en
+ningún lado — la escribe Codex cuando entrás con tu cuenta. La leemos en
+`sesion_chatgpt.py` y entra al resto del programa por acá, igual que las
+otras: para `Agente` sigue siendo `config.api_key` y nada más.
 """
 
 from __future__ import annotations
@@ -11,16 +17,27 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from . import sesion_chatgpt
+
 # Raíz del proyecto (donde vive el .env)
 RAIZ = Path(__file__).resolve().parents[2]
 
 load_dotenv(RAIZ / ".env")
 
 
-PROVEEDORES_VALIDOS = ("claude", "openai", "gemini")
+# El orden es el de los botones en la plataforma, y `chatgpt` va primero
+# porque es el que no pide ninguna clave: si no dijiste nada en el .env, es el
+# que se usa (ver PROVEEDOR_POR_DEFECTO más abajo).
+PROVEEDORES_VALIDOS = ("chatgpt", "claude", "openai", "gemini")
+
+# Con qué habla el agente si el .env no dice nada. Es ChatGPT porque es el
+# único que puede estar listo sin que pegues una clave en ningún lado: si
+# entraste con tu cuenta, ya está.
+PROVEEDOR_POR_DEFECTO = "chatgpt"
 MODOS_VALIDOS = ("test", "produccion")
 
-# Qué variable de entorno lleva la clave de cada proveedor
+# Qué variable de entorno lleva la clave de cada proveedor.
+# `chatgpt` no está: no lleva clave, lleva sesión (ver sesion_chatgpt.py).
 CLAVE_POR_PROVEEDOR = {
     "claude": "ANTHROPIC_API_KEY",
     "openai": "OPENAI_API_KEY",
@@ -28,6 +45,9 @@ CLAVE_POR_PROVEEDOR = {
 }
 
 MODELOS_POR_DEFECTO = {
+    # Sol es el que Codex ofrece primero. Los otros dos son Terra (equilibrado)
+    # y Luna (el rápido); en la plataforma los elegís de la lista.
+    "chatgpt": "gpt-5.6-sol",
     "claude": "claude-opus-5",
     "openai": "gpt-5",
     "gemini": "gemini-2.5-pro",
@@ -54,20 +74,6 @@ class Config:
     # de Telegram; el resto del proyecto ni lo mira.
     telegram_token: str = ""
 
-    # -- Chatwoot: solo lo mira el webhook (web/webhook.py) ------------------
-    chatwoot_url: str = ""
-    chatwoot_token: str = ""
-    chatwoot_cuenta_id: str = "1"
-    # La etiqueta que apaga al bot en una conversación: el traspaso a una
-    # persona. Se pone con un clic desde la bandeja de Chatwoot.
-    chatwoot_etiqueta_humano: str = "humano"
-    # El secreto que va en la URL del webhook. Chatwoot no firma sus pedidos,
-    # así que esto es lo único que separa un mensaje de verdad de cualquiera
-    # que haya descubierto el dominio.
-    chatwoot_webhook_token: str = ""
-    # Cuánto espera juntando la ráfaga antes de contestar (ver buffer.py).
-    buffer_segundos: int = 8
-
     @classmethod
     def desde_entorno(
         cls, proveedor: str | None = None, modelo: str | None = None
@@ -77,7 +83,9 @@ class Config:
         Se le puede pasar un proveedor y un modelo a mano para pisar los del
         .env: así la plataforma de pruebas los cambia en caliente.
         """
-        proveedor = (proveedor or os.getenv("PROVEEDOR", "claude")).strip().lower()
+        proveedor = (
+            proveedor or os.getenv("PROVEEDOR", PROVEEDOR_POR_DEFECTO)
+        ).strip().lower()
 
         if proveedor not in PROVEEDORES_VALIDOS:
             raise ErrorDeConfiguracion(
@@ -85,14 +93,22 @@ class Config:
                 f"Elegí uno de: {', '.join(PROVEEDORES_VALIDOS)}."
             )
 
-        nombre_clave = CLAVE_POR_PROVEEDOR[proveedor]
-        api_key = (os.getenv(nombre_clave) or "").strip()
+        if proveedor == "chatgpt":
+            # Acá no hay nada que completar en el .env: la credencial es la
+            # sesión de Codex. Si no sirve, el error dice qué hacer.
+            try:
+                api_key = sesion_chatgpt.sesion_usable().token
+            except sesion_chatgpt.ErrorDeSesion as e:
+                raise ErrorDeConfiguracion(str(e)) from None
+        else:
+            nombre_clave = CLAVE_POR_PROVEEDOR[proveedor]
+            api_key = (os.getenv(nombre_clave) or "").strip()
 
-        if not api_key:
-            raise ErrorDeConfiguracion(
-                f"Falta la clave de {proveedor}. "
-                f"Abrí el archivo .env y completá {nombre_clave}."
-            )
+            if not api_key:
+                raise ErrorDeConfiguracion(
+                    f"Falta la clave de {proveedor}. "
+                    f"Abrí el archivo .env y completá {nombre_clave}."
+                )
 
         modelo = (
             modelo
@@ -118,25 +134,16 @@ class Config:
             sqlite_ruta=os.getenv("SQLITE_RUTA", "datos/conversaciones.db"),
             postgres_dsn=(os.getenv("POSTGRES_DSN") or "").strip(),
             telegram_token=(os.getenv("TELEGRAM_TOKEN") or "").strip(),
-            chatwoot_url=(os.getenv("CHATWOOT_URL") or "").strip(),
-            chatwoot_token=(os.getenv("CHATWOOT_TOKEN") or "").strip(),
-            chatwoot_cuenta_id=(os.getenv("CHATWOOT_CUENTA_ID") or "1").strip(),
-            chatwoot_etiqueta_humano=(
-                os.getenv("CHATWOOT_ETIQUETA_HUMANO") or "humano"
-            ).strip(),
-            chatwoot_webhook_token=(
-                os.getenv("CHATWOOT_WEBHOOK_TOKEN") or ""
-            ).strip(),
-            buffer_segundos=_entero("BUFFER_SEGUNDOS", 8),
         )
 
 
 def proveedores_disponibles() -> dict[str, bool]:
-    """Qué proveedores tienen la clave cargada. Lo usa la web para los botones."""
-    return {
-        nombre: bool((os.getenv(clave) or "").strip())
-        for nombre, clave in CLAVE_POR_PROVEEDOR.items()
-    }
+    """Qué proveedores están listos para usar. Lo usa la web para los botones.
+
+    "Listo" es tener la clave en el .env, salvo para `chatgpt`, que es tener
+    una sesión de ChatGPT abierta y sin vencer.
+    """
+    return {nombre: bool(clave_de(nombre)) for nombre in PROVEEDORES_VALIDOS}
 
 
 # ---------------------------------------------------------------------------
@@ -154,6 +161,7 @@ AJUSTABLES = (
     "MODELO_CLAUDE",
     "MODELO_OPENAI",
     "MODELO_GEMINI",
+    "MODELO_CHATGPT",
     "MAX_TOKENS",
     "MEMORIA_MENSAJES",
 )
@@ -202,8 +210,17 @@ def guardar_ajustes(cambios: dict[str, str]) -> None:
 
 
 def clave_de(proveedor: str) -> str:
-    """La clave de un proveedor, o cadena vacía si no está cargada."""
-    variable = CLAVE_POR_PROVEEDOR.get(proveedor.strip().lower(), "")
+    """La credencial de un proveedor, o cadena vacía si no está.
+
+    Para tres es la clave del .env. Para `chatgpt` es el token de la sesión
+    de Codex, que se lee del disco y puede estar vencido.
+    """
+    proveedor = proveedor.strip().lower()
+
+    if proveedor == "chatgpt":
+        return sesion_chatgpt.credencial()
+
+    variable = CLAVE_POR_PROVEEDOR.get(proveedor, "")
     return (os.getenv(variable) or "").strip() if variable else ""
 
 

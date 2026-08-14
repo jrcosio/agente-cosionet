@@ -4,6 +4,16 @@ LangChain envuelve a todos los proveedores en la misma interfaz (BaseChatModel),
 así que el resto del código no sabe ni le importa si adentro hay Claude,
 OpenAI o Gemini. Cambiar de proveedor es cambiar una línea del .env.
 
+Son cuatro, y dos de ellos son OpenAI:
+
+    chatgpt  → los modelos de OpenAI con **tu suscripción de ChatGPT** en vez
+               de una clave. Sin clave y sin tarjeta: la credencial es la
+               sesión que abre Codex. Ver sesion_chatgpt.py. **Es el que se
+               usa si el .env no dice nada.**
+    claude   → Anthropic, con clave de API
+    openai   → OpenAI, con clave de API (se paga por token)
+    gemini   → Google, con clave de API
+
 Este archivo hace dos cosas:
 
     crear_modelo()   → arma el modelo con el que habla el agente
@@ -24,7 +34,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # pragma: no cover
     from langchain_core.language_models import BaseChatModel
 
-PROVEEDORES = ("claude", "openai", "gemini")
+PROVEEDORES = ("chatgpt", "claude", "openai", "gemini")
 
 
 # ---------------------------------------------------------------------------
@@ -40,6 +50,20 @@ def crear_modelo(
 ) -> "BaseChatModel":
     """Devuelve el modelo de LangChain que corresponda al proveedor."""
     proveedor = proveedor.strip().lower()
+
+    if proveedor == "chatgpt":
+        # Esta rama va antes de limitar_max_tokens() a propósito: la
+        # suscripción no acepta que le pidas un tope de salida, así que no hay
+        # ningún tope que ajustar y salir a consultarlo sería al vicio.
+        try:
+            from .modelo_chatgpt import crear_modelo_chatgpt
+        except ImportError:
+            raise ImportError(
+                "Falta el paquete de OpenAI: pip install langchain-openai"
+            ) from None
+
+        return crear_modelo_chatgpt(modelo, api_key)
+
     max_tokens = limitar_max_tokens(proveedor, api_key, modelo, max_tokens)
 
     if proveedor == "claude":
@@ -106,7 +130,7 @@ def crear_modelo(
         )
 
     raise ValueError(
-        f"No conozco el proveedor '{proveedor}'. Usá: claude, openai o gemini."
+        f"No conozco el proveedor '{proveedor}'. Usá: {', '.join(PROVEEDORES)}."
     )
 
 
@@ -183,6 +207,8 @@ def listar_modelos(proveedor: str, api_key: str) -> list[dict]:
             modelos = _modelos_openai(api_key)
         elif proveedor == "gemini":
             modelos = _modelos_gemini(api_key)
+        elif proveedor == "chatgpt":
+            modelos = _modelos_chatgpt()
         else:
             return []
     except Exception:
@@ -246,6 +272,19 @@ def _es_chat_de_openai(identificador: str) -> bool:
     )
     ident = identificador.lower()
     return ident.startswith(familias) and not any(p in ident for p in descartar)
+
+
+def _modelos_chatgpt() -> list[dict]:
+    """Los modelos de la suscripción. No lleva clave: lleva sesión.
+
+    Es el único que no mira el `api_key` que recibe `listar_modelos()`. Ese
+    token salió de la sesión de Codex, y para consultar el listado hace falta
+    también la cuenta, así que la volvemos a leer entera de una sola fuente.
+    """
+    from .sesion_chatgpt import leer_sesion, modelos_disponibles
+
+    sesion = leer_sesion()
+    return modelos_disponibles(sesion) if sesion else []
 
 
 def _modelos_gemini(api_key: str) -> list[dict]:

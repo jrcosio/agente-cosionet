@@ -10,9 +10,8 @@ Telegram se puede escuchar de dos formas, y acá usamos la primera:
     webhook  → Telegram le pega a una URL tuya (necesita URL pública y HTTPS)
 
 Polling es lo que hace que esto **funcione desde tu computadora**, sin dominio,
-sin certificado y sin abrir puertos. Es la razón por la que Telegram viene
-antes que WhatsApp en la serie: WhatsApp obliga a webhook, y ahí ya necesitás
-un servidor de verdad.
+sin certificado y sin abrir puertos. Un canal que obligara a webhook —hay
+varios— necesitaría un servidor de verdad; este no.
 
 El `conversacion` (el thread_id de LangGraph) es el **chat_id** de Telegram.
 Eso es lo único que no se puede equivocar: si dos personas compartieran el

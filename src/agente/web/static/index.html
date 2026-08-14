@@ -292,7 +292,14 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const NOMBRES = { claude: 'Claude', openai: 'OpenAI', gemini: 'Gemini' };
+const NOMBRES = { claude: 'Claude', openai: 'OpenAI', gemini: 'Gemini', chatgpt: 'ChatGPT' };
+
+// Qué le falta a cada proveedor cuando el botón está apagado. ChatGPT es el
+// único que no se arregla en el .env: ese va con tu suscripción.
+const FALTA = {
+  chatgpt: 'Entrá con tu cuenta en la app de ChatGPT (o corré: codex login)',
+};
+const FALTA_POR_DEFECTO = 'Falta la clave en el .env';
 
 let proveedor = null;
 let modelo = null;
@@ -326,7 +333,9 @@ function pintarProveedores(disponibles) {
     b.className = 'prov' + (clave === proveedor ? ' activo' : '');
     b.textContent = NOMBRES[clave] ?? clave;
     b.disabled = !listo;
-    b.title = listo ? `Usar ${NOMBRES[clave]}` : 'Falta la clave en el .env';
+    b.title = listo
+      ? `Usar ${NOMBRES[clave] ?? clave}`
+      : (FALTA[clave] ?? FALTA_POR_DEFECTO);
     b.onclick = async () => {
       proveedor = clave;
       modelo = null;               // que elija el primero del nuevo proveedor
@@ -349,7 +358,9 @@ function pintarEstado(a) {
     <span class="chip"><b>caché</b>
       <span class="valor ${a.cache ? 'si' : ''}">${a.cache ? 'activado' : 'apagado'}</span></span>
     <span class="chip"><b>máx. respuesta</b>
-      <span class="valor">${a.max_tokens.toLocaleString('es-AR')} tokens</span></span>
+      <span class="valor">${a.proveedor === 'chatgpt'
+        ? 'lo decide ChatGPT'
+        : a.max_tokens.toLocaleString('es-AR') + ' tokens'}</span></span>
     <span class="chip">
       <b>recuerda</b>
       <input class="num" id="ajMemoria" type="number" min="2" max="200">
@@ -392,9 +403,11 @@ function pintarAviso(e) {
   aviso.classList.remove('oculto');
   aviso.innerHTML = e.hay_alguno
     ? `<strong>Ojo:</strong> ${e.error}`
-    : `<strong>Todavía no hay ninguna clave cargada.</strong><br>
+    : `<strong>Todavía no hay ningún proveedor listo.</strong><br>
        Copiá <code>.env.example</code> como <code>.env</code> y poné la clave
-       de un solo proveedor. Con eso alcanza: recargá la página y listo.`;
+       de uno solo. Con eso alcanza: recargá la página y listo.<br>
+       Si tenés suscripción de ChatGPT no hace falta ninguna clave: entrá con
+       tu cuenta en la app de ChatGPT y usá el botón <code>ChatGPT</code>.`;
 }
 
 function pintarMemoria(n) {
