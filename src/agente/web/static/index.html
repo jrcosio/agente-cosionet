@@ -144,6 +144,47 @@
     background:var(--panel); border:1px solid var(--borde);
     padding:13px 16px; border-radius:10px;
   }
+
+  /* ---------- Markdown de la respuesta ----------
+     El modelo contesta en markdown (negritas, listas, código). La burbuja del
+     agente lleva la clase `md` y ahí el texto ya viene convertido a HTML, así
+     que el `pre-wrap` de arriba tiene que salir: los saltos los pone el
+     markdown, y con los dos a la vez todo queda al doble de separado. */
+  .burbuja.md{white-space:normal}
+  .burbuja.md > *:first-child{margin-top:0}
+  .burbuja.md > *:last-child{margin-bottom:0}
+  .burbuja.md p{margin:0 0 11px}
+  .burbuja.md strong{color:#fff; font-weight:600}
+  .burbuja.md em{font-style:italic}
+  .burbuja.md del{opacity:.6}
+  .burbuja.md h1,.burbuja.md h2,.burbuja.md h3{
+    font-size:15px; font-weight:600; margin:16px 0 8px; color:var(--ambar-suave);
+  }
+  .burbuja.md h1{font-size:17px}
+  .burbuja.md ul,.burbuja.md ol{margin:0 0 11px; padding-left:22px}
+  .burbuja.md li{margin-bottom:4px}
+  .burbuja.md li::marker{color:var(--ambar)}
+  .burbuja.md a{color:var(--ambar-suave); text-decoration:underline}
+  .burbuja.md code{
+    font-family:var(--mono); font-size:13px; background:var(--panel);
+    border:1px solid var(--borde); border-radius:5px; padding:1px 5px;
+  }
+  .burbuja.md pre{
+    background:var(--panel); border:1px solid var(--borde); border-radius:9px;
+    padding:12px 14px; margin:0 0 11px; overflow-x:auto;
+  }
+  /* Dentro de un bloque, el código no lleva su propio marco. */
+  .burbuja.md pre code{
+    background:none; border:none; padding:0; font-size:12.5px; line-height:1.5;
+  }
+  .burbuja.md blockquote{
+    border-left:2px solid var(--borde); padding-left:12px; margin:0 0 11px;
+    color:var(--tenue);
+  }
+  .burbuja.md hr{border:none; border-top:1px solid var(--borde); margin:14px 0}
+  .burbuja.md table{border-collapse:collapse; margin:0 0 11px; font-size:14px}
+  .burbuja.md th,.burbuja.md td{border:1px solid var(--borde); padding:5px 10px}
+  .burbuja.md th{background:var(--panel); font-weight:600; text-align:left}
   .msg.error .quien{color:var(--rojo)}
   .msg.error .burbuja{
     background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.3);
@@ -295,13 +336,6 @@
 const $ = (id) => document.getElementById(id);
 const NOMBRES = { claude: 'Claude', openai: 'OpenAI', gemini: 'Gemini', chatgpt: 'ChatGPT' };
 
-// Qué le falta a cada proveedor cuando el botón está apagado. ChatGPT es el
-// único que no se arregla en el .env: ese va con tu suscripción.
-const FALTA = {
-  chatgpt: 'Entra con tu cuenta en la app de ChatGPT (o corre: codex login)',
-};
-const FALTA_POR_DEFECTO = 'Falta la clave en el .env';
-
 let proveedor = null;
 let modelo = null;
 let ocupado = false;
@@ -327,16 +361,21 @@ async function cargarEstado() {
   if (proveedor) cargarModelos(proveedor);
 }
 
+/** Un botón por cada proveedor que esté listo para usar.
+ *
+ *  Los que no tienen credencial no se muestran: antes salían en gris y
+ *  desactivados, y eso es ruido — si no vas a usar Gemini, no hace falta que
+ *  te lo recuerde una plataforma en la que solo hay un botón que sirve. Si no
+ *  hay ninguno, el aviso de abajo explica qué hacer.
+ */
 function pintarProveedores(disponibles) {
   $('proveedores').innerHTML = '';
   for (const [clave, listo] of Object.entries(disponibles)) {
+    if (!listo) continue;
     const b = document.createElement('button');
     b.className = 'prov' + (clave === proveedor ? ' activo' : '');
     b.textContent = NOMBRES[clave] ?? clave;
-    b.disabled = !listo;
-    b.title = listo
-      ? `Usar ${NOMBRES[clave] ?? clave}`
-      : (FALTA[clave] ?? FALTA_POR_DEFECTO);
+    b.title = `Usar ${NOMBRES[clave] ?? clave}`;
     b.onclick = async () => {
       proveedor = clave;
       modelo = null;               // que elija el primero del nuevo proveedor
@@ -478,6 +517,174 @@ function aplicarModelo() {
   guardarAjustes(cambios);
 }
 
+// ---------- Markdown ----------
+//
+// El modelo contesta en markdown, así que hay que mostrarlo formateado y no
+// con los asteriscos a la vista. Es un intérprete corto, escrito a mano y a
+// propósito: traer una librería por CDN sumaría una dependencia y dejaría la
+// plataforma a medias sin internet, y acá basta con el subset que el modelo
+// usa de verdad.
+//
+// El orden de los pasos no es casual:
+//
+//   1. se escapa el HTML — el texto del modelo NUNCA entra crudo al DOM
+//   2. se aparta el código (en bloque y en línea) detrás de un marcador, para
+//      que nada de adentro se interprete como markdown
+//   3. se convierten los bloques: títulos, listas, citas, tablas, separadores
+//   4. se convierte lo de dentro de cada línea: negrita, cursiva, enlaces
+//   5. se devuelve el código a su lugar
+//
+// Ojo con una decisión: `_esto_` y `__esto__` NO se toman como cursiva ni
+// negrita. En este proyecto el guion bajo aparece todo el tiempo en nombres
+// reales (`MODELO_CHATGPT`, `thread_id`, `max_output_tokens`) y convertirlos
+// se los comería. Los modelos usan asteriscos, que sí están soportados.
+
+const HTML_ESCAPADO = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+const escapar = (t) => t.replace(/[&<>]/g, (c) => HTML_ESCAPADO[c]);
+
+/** Un enlace, y solo si el esquema es de fiar.
+ *
+ *  Lo que no sea http(s) o mailto se devuelve **tal como vino**, sin
+ *  convertirlo: así un `javascript:` no llega nunca al href y encima se ve
+ *  entero en pantalla, que es la pista de que algo raro pasó.
+ */
+function enlace(crudo, texto, url) {
+  const limpia = url.trim();
+  if (!/^(https?:\/\/|mailto:)/i.test(limpia)) return crudo;
+  return `<a href="${limpia}" target="_blank" rel="noopener noreferrer">${texto}</a>`;
+}
+
+/** Negrita, cursiva, tachado y enlaces dentro de una línea. */
+function enLinea(t) {
+  return t
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+    .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+    .replace(/\[([^\]]*)\]\(([^)\s]+)\)/g, (m, txt, url) => enlace(m, txt, url));
+}
+
+function markdown(texto) {
+  let t = escapar(texto);
+
+  // -- Paso 2: el código se guarda aparte -----------------------------------
+  const guardados = [];
+  // El hueco va marcado entre NUL: es un carácter de control que no puede
+  // venir en el texto del modelo. Con un separador cualquiera —" 3 ", por
+  // ejemplo— un texto como "hay 3 modelos" se tomaría por un hueco y
+  // desaparecería al reponer el código.
+  const guardar = (html) => `\u0000${guardados.push(html) - 1}\u0000`;
+
+  // Bloques cerrados con sus tres comillas. El primer renglón puede traer el
+  // lenguaje (```python) y no se muestra.
+  t = t.replace(/```[^\n]*\n([\s\S]*?)```/g, (_, codigo) =>
+    guardar(`<pre><code>${codigo.replace(/\n$/, '')}</code></pre>`));
+
+  // Un bloque todavía sin cerrar: pasa mientras la respuesta llega en vivo.
+  // Se muestra igual, así no se ve el markdown crudo por un instante.
+  t = t.replace(/```[^\n]*\n([\s\S]*)$/, (_, codigo) =>
+    guardar(`<pre><code>${codigo}</code></pre>`));
+
+  t = t.replace(/`([^`\n]+)`/g, (_, c) => guardar(`<code>${c}</code>`));
+
+  // -- Paso 3: los bloques ---------------------------------------------------
+  const lineas = t.split('\n');
+  const salida = [];
+  let parrafo = [];
+
+  const cerrarParrafo = () => {
+    if (parrafo.length) salida.push(`<p>${enLinea(parrafo.join('<br>'))}</p>`);
+    parrafo = [];
+  };
+
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i];
+    const pelada = linea.trim();
+
+    if (!pelada) { cerrarParrafo(); continue; }
+
+    // Separador
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(pelada)) {
+      cerrarParrafo(); salida.push('<hr>'); continue;
+    }
+
+    // Título
+    const titulo = pelada.match(/^(#{1,6})\s+(.*)$/);
+    if (titulo) {
+      cerrarParrafo();
+      const nivel = Math.min(titulo[1].length, 3);
+      salida.push(`<h${nivel}>${enLinea(titulo[2])}</h${nivel}>`);
+      continue;
+    }
+
+    // Tabla: una fila de encabezado y debajo la de guiones
+    if (pelada.startsWith('|') && /^\|[\s:|-]+\|?$/.test((lineas[i + 1] || '').trim())) {
+      cerrarParrafo();
+      const celdas = (fila) => fila.trim().replace(/^\||\|$/g, '').split('|');
+      let html = '<table><thead><tr>' +
+        celdas(pelada).map((c) => `<th>${enLinea(c.trim())}</th>`).join('') +
+        '</tr></thead><tbody>';
+      i += 2;  // saltamos el encabezado y los guiones
+      while (i < lineas.length && lineas[i].trim().startsWith('|')) {
+        html += '<tr>' +
+          celdas(lineas[i]).map((c) => `<td>${enLinea(c.trim())}</td>`).join('') +
+          '</tr>';
+        i++;
+      }
+      i--;
+      salida.push(html + '</tbody></table>');
+      continue;
+    }
+
+    // Lista, con o sin números. Se consumen todos los renglones seguidos.
+    const conNumero = /^\d+[.)]\s+/.test(pelada);
+    if (conNumero || /^[-*+]\s+/.test(pelada)) {
+      cerrarParrafo();
+      const etiqueta = conNumero ? 'ol' : 'ul';
+      const puntos = [];
+      while (i < lineas.length) {
+        const p = lineas[i].trim();
+        const m = p.match(conNumero ? /^\d+[.)]\s+(.*)$/ : /^[-*+]\s+(.*)$/);
+        if (!m) break;
+        puntos.push(`<li>${enLinea(m[1])}</li>`);
+        i++;
+      }
+      i--;
+      salida.push(`<${etiqueta}>${puntos.join('')}</${etiqueta}>`);
+      continue;
+    }
+
+    // Cita
+    if (pelada.startsWith('&gt;')) {
+      cerrarParrafo();
+      const dentro = [];
+      while (i < lineas.length && lineas[i].trim().startsWith('&gt;')) {
+        dentro.push(lineas[i].trim().replace(/^&gt;\s?/, ''));
+        i++;
+      }
+      i--;
+      salida.push(`<blockquote>${enLinea(dentro.join('<br>'))}</blockquote>`);
+      continue;
+    }
+
+    // Un bloque de código ocupa el renglón entero y no puede ir dentro de un
+    // <p>: es HTML inválido y el navegador cierra el párrafo por su cuenta,
+    // con lo que la separación queda descolocada.
+    const solo = pelada.match(/^\u0000(\d+)\u0000$/);
+    if (solo && guardados[Number(solo[1])].startsWith('<pre')) {
+      cerrarParrafo();
+      salida.push(pelada);
+      continue;
+    }
+
+    parrafo.push(linea);
+  }
+  cerrarParrafo();
+
+  // -- Paso 5: vuelve el código --------------------------------------------
+  return salida.join('')
+    .replace(/\u0000(\d+)\u0000/g, (_, n) => guardados[Number(n)]);
+}
+
 // ---------- Chat ----------
 
 function agregarMensaje(clase, quien, texto = '') {
@@ -538,7 +745,12 @@ async function enviar() {
 
         if (tipo === 'texto') {
           acumulado += d.texto;
-          burbuja.textContent = acumulado;
+          // Se vuelve a convertir el texto entero en cada pedazo, no solo el
+          // nuevo: el markdown necesita ver la marca completa. Con "**27,3" a
+          // medias todavía no hay negrita, y aparece sola cuando llegan los
+          // dos asteriscos que cierran.
+          burbuja.className = 'burbuja md';
+          burbuja.innerHTML = markdown(acumulado);
           burbuja.appendChild(cursor);
           abajo();
         }
@@ -563,6 +775,9 @@ async function enviar() {
           cursor.remove();
           div.className = 'msg error';
           div.querySelector('.quien').textContent = 'Error';
+          // El error del proveedor va tal cual, sin interpretarlo: si trae
+          // asteriscos o comillas, son parte del error y hay que verlos.
+          burbuja.className = 'burbuja';
           burbuja.textContent = d.mensaje;
           abajo();
         }
@@ -572,6 +787,7 @@ async function enviar() {
     cursor.remove();
     div.className = 'msg error';
     div.querySelector('.quien').textContent = 'Error';
+    burbuja.className = 'burbuja';
     burbuja.textContent = 'No se pudo hablar con el servidor: ' + e.message;
   }
 

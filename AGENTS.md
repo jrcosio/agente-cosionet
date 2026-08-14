@@ -105,7 +105,7 @@ entrar con la cuenta. Se lee en `sesion_chatgpt.py` y entra al programa por
 | Nueva variable de configuración | `config.py` | Campo en `Config` + lectura en `desde_entorno()` + línea en `.env.example` |
 | **Agregar una dependencia** | `pyproject.toml` | Y también en el `requirements*.txt` que corresponda, y después `uv lock`. Si te olvidas de alguno de los tres, falla `tests/test_dependencias.py` |
 | Que se pueda editar desde la web | `config.py` | Agregarla a `AJUSTABLES` + campo en `AjustesEntrantes` (`web/app.py`) + control en la barra de estado |
-| Tocar la interfaz | `web/static/index.html` | Un solo archivo, sin build ni npm |
+| Tocar la interfaz | `web/static/index.html` | Un solo archivo, sin build ni npm. Ahí adentro está también el intérprete de markdown |
 
 ---
 
@@ -296,6 +296,28 @@ Cosas que parecen bugs y no lo son, o que cuestan de encontrar:
   listo sin que nadie pegue una clave, así que es el que corresponde de
   arranque. El orden de `PROVEEDORES_VALIDOS` también cambió por eso: es el
   orden de los botones en la web.
+- **La respuesta se convierte de markdown en el navegador, y entera en cada
+  pedazo.** El modelo contesta con `**negritas**`, listas y bloques de código,
+  así que `index.html` trae un intérprete de markdown escrito a mano (no hay
+  librería por CDN: sumaría una dependencia y dejaría la plataforma a medias
+  sin internet). Tres cosas que no son obvias y que se rompen fácil si se
+  tocan:
+  · **se vuelve a convertir todo el texto acumulado en cada chunk**, no solo el
+  nuevo — con `**27,3` a medias todavía no hay marca que cerrar, y la negrita
+  aparece sola cuando llegan los dos asteriscos del final;
+  · la burbuja del agente lleva la clase `md`, que **apaga el `white-space:
+  pre-wrap`** de `.burbuja`: los saltos ya los pone el HTML y con los dos a la
+  vez todo queda al doble de separado (los errores sí siguen en `pre-wrap`,
+  porque el texto del proveedor va tal cual);
+  · el código se aparta detrás de un marcador **entre NUL** antes de convertir
+  el resto. El carácter importa: con un separador cualquiera como `" 3 "`, un
+  texto como "hay 3 modelos" se toma por un hueco y desaparece.
+  Y `_asi_` **no** es cursiva a propósito: en este proyecto el guion bajo está
+  en todos los nombres reales (`MODELO_CHATGPT`, `thread_id`).
+- **Los proveedores sin credencial no se muestran en la barra.** Antes salían
+  en gris y desactivados; ahora `pintarProveedores()` los saltea. Si no hay
+  ninguno listo la barra queda vacía y el que explica qué hacer es el aviso
+  amarillo de abajo, no los botones.
 - **La lista de modelos de OpenAI trae todo junto** (imágenes, audio,
   embeddings) y hay que filtrarla; la de Anthropic ya viene limpia y ordenada.
 - **El listado de la suscripción pide la versión del cliente** y devuelve
